@@ -3429,7 +3429,10 @@
       return String(str||'').replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
     }
 
-    // Android APK, WebView & Browser Text-to-Speech Engine
+        // ==========================================
+    // ADVANCED ALL-IN-ONE TEXT-TO-SPEECH SYSTEM
+    // (Kodular APK + Web Fallback + SpeechSynthesis)
+    // ==========================================
     let hasSpokenWelcomeVoice = false;
     let currentSpeechInstance = null;
 
@@ -3447,34 +3450,74 @@
     }
 
     function speakClassAnnouncement(isManual = false) {
-      if (!('speechSynthesis' in window)) return;
       if (!isManual && hasSpokenWelcomeVoice) return;
 
       const liveStatusEl = document.getElementById('liveClassStatus');
       let statusCommentary = liveStatusEl ? (liveStatusEl.innerText || liveStatusEl.textContent).trim() : "";
+      
+      // ইমোজি ও অনাকাঙ্ক্ষিত চিহ্ন ফিল্টার করা
       statusCommentary = statusCommentary.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g, '').trim();
 
       const userGreetingName = currentUserName ? currentUserName.trim() : "User";
-      let speechText = `Hi ${userGreetingName}, ${statusCommentary}`;
+      const rawText = `Hi ${userGreetingName}, ${statusCommentary}`;
 
-      try {
-        window.speechSynthesis.cancel();
-        currentSpeechInstance = new SpeechSynthesisUtterance(speechText);
-        currentSpeechInstance.lang = 'en-US';
-        currentSpeechInstance.volume = 1.0;
-        currentSpeechInstance.rate = 0.95;
-        currentSpeechInstance.pitch = 1.0;
-
-        const voice = getAvailableSpeechVoice();
-        if (voice) {
-          currentSpeechInstance.voice = voice;
-        }
-
-        window._activeUtterance = currentSpeechInstance;
-        window.speechSynthesis.speak(currentSpeechInstance);
+      // ১. কোদলার অ্যাপ ব্রিজ (APK-এর জন্য)
+      if (window.AppInventor) {
+        window.AppInventor.setWebViewString(rawText);
         hasSpokenWelcomeVoice = true;
+        return;
+      }
+
+      // ২. স্ট্যান্ডার্ড ব্রাউজার সিন্থেসিস ইঞ্জিন
+      let synthesisTriggered = false;
+      if ('speechSynthesis' in window && window.speechSynthesis) {
+        try {
+          window.speechSynthesis.cancel();
+          currentSpeechInstance = new SpeechSynthesisUtterance(rawText);
+          currentSpeechInstance.lang = 'en-US';
+          currentSpeechInstance.volume = 1.0;
+          currentSpeechInstance.rate = 0.95;
+          currentSpeechInstance.pitch = 1.0;
+
+          const voice = getAvailableSpeechVoice();
+          if (voice) currentSpeechInstance.voice = voice;
+
+          currentSpeechInstance.onerror = () => {
+            playFallbackAudioTTS(rawText);
+          };
+
+          window._activeUtterance = currentSpeechInstance;
+          window.speechSynthesis.speak(currentSpeechInstance);
+          synthesisTriggered = true;
+          hasSpokenWelcomeVoice = true;
+        } catch (err) {
+          synthesisTriggered = false;
+        }
+      }
+
+      // ৩. অনলাইন অডিও ব্যাকআপ (যদি স্পিচ ইঞ্জিন কাজ না করে)
+      if (!synthesisTriggered) {
+        playFallbackAudioTTS(rawText);
+      }
+    }
+
+    function playFallbackAudioTTS(text) {
+      try {
+        const encodedText = encodeURIComponent(text);
+        const ttsUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodedText}&tl=en&client=tw-ob`;
+        
+        let ttsAudio = document.getElementById('ttsFallbackPlayer');
+        if (!ttsAudio) {
+          ttsAudio = document.createElement('audio');
+          ttsAudio.id = 'ttsFallbackPlayer';
+          document.body.appendChild(ttsAudio);
+        }
+        ttsAudio.src = ttsUrl;
+        ttsAudio.play().then(() => {
+          hasSpokenWelcomeVoice = true;
+        }).catch(() => {});
       } catch (err) {
-        console.error("Speech Synthesis Error:", err);
+        console.error("TTS Fallback error:", err);
       }
     }
 
@@ -3487,6 +3530,7 @@
     }
     window.addEventListener('touchstart', unlockAndSpeakAudioOnInteraction, { once: true });
     window.addEventListener('click', unlockAndSpeakAudioOnInteraction, { once: true });
+
 
     function updateLiveDashboard() {
       try {
@@ -3677,6 +3721,7 @@
   </script>
 </body>
 </html>
+
 
 
 
