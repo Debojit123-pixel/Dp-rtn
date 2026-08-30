@@ -1074,13 +1074,6 @@
       </div>
 
       <div class="admin-box">
-        <h4>App Update Manager</h4>
-        <input type="text" id="adminUpdateVersion" class="input-field" placeholder="Target Version Code (e.g. 1.0.2)">
-        <input type="text" id="adminUpdateUrl" class="input-field" placeholder="APK Download Link URL">
-        <button class="btn-action" onclick="publishAppUpdate()">Trigger Mandatory Update</button>
-      </div>
-
-      <div class="admin-box">
         <h4>Edit Routine & Room No.</h4>
         <select id="editDaySelect" class="input-field" onchange="populatePeriodSelector()">
           <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option>
@@ -1390,17 +1383,6 @@
     </div>
   </div>
 
-  <!-- ম্যান্ডেটরি আপডেট পপআপ -->
-  <div class="modal" id="updateModal" style="z-index: 1000000;">
-    <div class="modal-content" style="text-align: center;">
-      <h2 style="color: #0284c7; margin-bottom: 6px; font-weight:800; font-size:17px;">Update Required</h2>
-      <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 14px;">A new version is available. Please download to continue.</p>
-      <a id="updateRedirectBtn" href="#" target="_blank" style="text-decoration: none;">
-        <button class="btn-action">Download Update</button>
-      </a>
-    </div>
-  </div>
-
   <div class="modal" id="menuModal" onclick="closeModalOnOutsideClick(event, 'menuModal')">
     <div class="modal-content">
       <div class="modal-header">
@@ -1450,8 +1432,6 @@
   <audio id="trimmerPreviewAudio" preload="auto" crossorigin="anonymous"></audio>
 
   <script>
-    const APP_VERSION = "1.0.1";
-
     const DEFAULT_ROUTINE_DATA = {
       "Monday": [
         { time: "9:30 AM - 10:30 AM", start: "09:30", end: "10:30", sub: "ACCY-213" },
@@ -1581,7 +1561,7 @@
       const openModals = document.querySelectorAll('.modal');
       let modalClosed = false;
       openModals.forEach(m => {
-        if (m.style.display === 'flex' && m.id !== 'firstLoginModal' && m.id !== 'userLoginModal' && m.id !== 'updateModal') {
+        if (m.style.display === 'flex' && m.id !== 'firstLoginModal' && m.id !== 'userLoginModal') {
           m.style.display = 'none';
           modalClosed = true;
         }
@@ -1859,7 +1839,6 @@
     const TOPIC_STORIES = 'bhcom2026/stories_24h';
     const TOPIC_POSTS = 'bhcom2026/feed_posts_v1';
     const TOPIC_USERS = 'bhcom2026/users_reg_v2';
-    const TOPIC_VERSION = 'bhcom2026/version';
 
     let currentOverride = { status: 'NORMAL', msg: '', targetClass: '', startTime: 0 };
 
@@ -1874,8 +1853,7 @@
         TOPIC_ROUTINE,
         TOPIC_STORIES,
         TOPIC_POSTS,
-        TOPIC_USERS,
-        TOPIC_VERSION
+        TOPIC_USERS
       ], (err) => {
         if (!err) sendPresenceHeartbeat();
       });
@@ -1976,13 +1954,6 @@
             banner.style.display = 'block';
           } else {
             banner.style.display = 'none';
-          }
-        } else if (topic === TOPIC_VERSION) {
-          if (data && data.latestVersion && data.url) {
-            if (data.latestVersion !== APP_VERSION) {
-              document.getElementById('updateRedirectBtn').href = data.url;
-              openModal('updateModal');
-            }
           }
         }
       } catch (e) {
@@ -3397,14 +3368,6 @@
       }
     }
 
-    function publishAppUpdate() {
-      const ver = document.getElementById('adminUpdateVersion').value.trim();
-      const url = document.getElementById('adminUpdateUrl').value.trim();
-      if (!ver || !url) return;
-      client.publish(TOPIC_VERSION, JSON.stringify({ latestVersion: ver, url: url }), { retain: true });
-      alert(`Mandatory Update triggered for version ${ver}`);
-    }
-
     function setTickerText() {
       const val = document.getElementById('adminTickerInput').value.trim();
       if (!val) return;
@@ -3488,7 +3451,6 @@
       return String(str||'').replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
     }
 
-    // Android WebView Speech Engine Fix
     let hasSpokenWelcomeVoice = false;
     let currentSpeechInstance = null;
 
@@ -3573,7 +3535,6 @@
       }
     }
 
-    // Android First Touch Audio & Speech Unlocker
     function enableAppAudioOnFirstTouch() {
       if (!hasSpokenWelcomeVoice) {
         speakClassAnnouncement(false);
@@ -3812,3 +3773,4 @@
   </script>
 </body>
 </html>
+
