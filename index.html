@@ -3,6 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#eef7ff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>BH COM ROUTINE & REELS</title>
   <!-- MQTT WebSockets Real-time Client -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -42,7 +45,8 @@
     body {
       display: flex;
       justify-content: center;
-      padding-bottom: 70px;
+      padding-top: env(safe-area-inset-top, 0px);
+      padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
     }
 
     #splashScreen {
@@ -314,7 +318,6 @@
     .day-name { font-size: 20px; font-weight: 800; color: #0284c7; }
     .date-str { font-size: 11.5px; color: var(--text-muted); font-weight: 600; }
     
-    /* সময় সুন্দরভাবে দেখার জন্য লাইট ব্লু ব্যাকগ্রাউন্ড */
     .clock-time-badge {
       background: #e0f2fe;
       border: 1px solid #bae6fd;
@@ -569,6 +572,7 @@
       align-items: center;
       z-index: 9999;
       box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.08);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
     }
     .nav-tab-item {
       display: flex;
@@ -940,7 +944,6 @@
           <div class="date-str" id="currentDateStr">--</div>
         </div>
         
-        <!-- আপডেট: লাইট ব্লু ব্যাকগ্রাউন্ডে পরিচ্ছন্ন ঘড়ি -->
         <div class="clock-time-badge" id="liveClock">--:--:-- --</div>
 
         <div class="progress-wrapper">
@@ -1106,7 +1109,6 @@
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
       Home
     </button>
-    <!-- আপডেট: রিলস ফিডে চাপ দিলে স্বয়ংক্রিয় রিফ্রেশ হবে -->
     <button class="nav-tab-item" onclick="openAndRefreshFeedTab(this)">
       <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/></svg>
       Reels
@@ -1800,7 +1802,7 @@
           if (w > h) {
             if (w > maxW) { h *= maxW / w; w = maxW; }
           } else {
-            if (h > maxH) { w *= maxH / h; h = maxH; }
+            if (h > maxH) { h *= maxH / h; h = maxH; }
           }
           canvas.width = w;
           canvas.height = h;
@@ -2639,7 +2641,6 @@
       });
     }
 
-    // প্রতি ক্লিকে র‍্যান্ডম অর্ডারে ফ্রেশ ফিড তৈরির ফাংশন
     function generateSmartRandomizedFeed(posts) {
       if (!posts || posts.length === 0) return [];
       const list = [...posts];
@@ -3428,100 +3429,64 @@
       return String(str||'').replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
     }
 
-    // Android APK & WebView Speech Engine Fix
+    // Android APK, WebView & Browser Text-to-Speech Engine
     let hasSpokenWelcomeVoice = false;
     let currentSpeechInstance = null;
 
+    function getAvailableSpeechVoice() {
+      if (!('speechSynthesis' in window)) return null;
+      const voices = window.speechSynthesis.getVoices();
+      if (!voices || voices.length === 0) return null;
+      return voices.find(v => v.lang && (v.lang.startsWith('en') || v.lang.startsWith('en_US') || v.lang.startsWith('en_GB'))) || voices[0];
+    }
+
     if ('speechSynthesis' in window) {
       window.speechSynthesis.onvoiceschanged = () => {
-        window.speechSynthesis.getVoices();
+        getAvailableSpeechVoice();
       };
     }
 
     function speakClassAnnouncement(isManual = false) {
+      if (!('speechSynthesis' in window)) return;
       if (!isManual && hasSpokenWelcomeVoice) return;
 
-      const now = new Date();
-      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const currentDay = days[now.getDay()];
-      const todayList = ROUTINE_DATA[currentDay] || [];
+      const liveStatusEl = document.getElementById('liveClassStatus');
+      let statusCommentary = liveStatusEl ? (liveStatusEl.innerText || liveStatusEl.textContent).trim() : "";
+      statusCommentary = statusCommentary.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]|\uD83C[\uDF00-\uDFFF]|\uD83D[\uDC00-\uDE4F]/g, '').trim();
 
-      let speechText = `Hello ${currentUserName || 'friend'}! `;
+      const userGreetingName = currentUserName ? currentUserName.trim() : "User";
+      let speechText = `Hi ${userGreetingName}, ${statusCommentary}`;
 
-      if (todayList.length === 0) {
-        speechText += "Today is Sunday. There are no classes scheduled for today. Enjoy your holiday!";
-      } else {
-        const currentMinutes = now.getHours() * 60 + now.getMinutes();
-        let activeIdx = -1;
+      try {
+        window.speechSynthesis.cancel();
+        currentSpeechInstance = new SpeechSynthesisUtterance(speechText);
+        currentSpeechInstance.lang = 'en-US';
+        currentSpeechInstance.volume = 1.0;
+        currentSpeechInstance.rate = 0.95;
+        currentSpeechInstance.pitch = 1.0;
 
-        todayList.forEach((item, index) => {
-          const [sh, sm] = item.start.split(':').map(Number);
-          const [eh, em] = item.end.split(':').map(Number);
-          const startMin = sh * 60 + sm;
-          const endMin = eh * 60 + em;
-
-          if (currentMinutes >= startMin && currentMinutes < endMin) {
-            activeIdx = index;
-          }
-        });
-
-        if (activeIdx !== -1) {
-          const currentClass = todayList[activeIdx];
-          const nextClass = todayList[activeIdx + 1];
-
-          speechText += `Your current class is ${currentClass.sub}. `;
-          if (nextClass && nextClass.sub !== '\u2014' && nextClass.sub.trim() !== '') {
-            speechText += `Next class will be ${nextClass.sub} starting at ${nextClass.time.split(' - ')[0]}.`;
-          } else {
-            speechText += `This is the last scheduled class for today.`;
-          }
-        } else {
-          const firstPeriod = todayList[0];
-          const [firstH, firstM] = firstPeriod ? firstPeriod.start.split(':').map(Number) : [9, 30];
-
-          if (currentMinutes < (firstH * 60 + firstM)) {
-            speechText += `Today's first class will start at ${firstPeriod.time.split(' - ')[0]} for ${firstPeriod.sub}.`;
-          } else {
-            speechText += `All classes have ended for today. Have a great time!`;
-          }
+        const voice = getAvailableSpeechVoice();
+        if (voice) {
+          currentSpeechInstance.voice = voice;
         }
-      }
 
-      if ('speechSynthesis' in window) {
-        try {
-          window.speechSynthesis.cancel();
-          currentSpeechInstance = new SpeechSynthesisUtterance(speechText);
-          currentSpeechInstance.lang = 'en-US';
-          currentSpeechInstance.volume = 1.0;
-          currentSpeechInstance.rate = 1.0;
-          currentSpeechInstance.pitch = 1.0;
-
-          const voices = window.speechSynthesis.getVoices();
-          if (voices && voices.length > 0) {
-            const preferredVoice = voices.find(v => v.lang && v.lang.startsWith('en'));
-            if (preferredVoice) {
-              currentSpeechInstance.voice = preferredVoice;
-            }
-          }
-
-          window._activeUtterance = currentSpeechInstance;
-          window.speechSynthesis.speak(currentSpeechInstance);
-          hasSpokenWelcomeVoice = true;
-        } catch(e) {
-          console.error("Speech Error:", e);
-        }
+        window._activeUtterance = currentSpeechInstance;
+        window.speechSynthesis.speak(currentSpeechInstance);
+        hasSpokenWelcomeVoice = true;
+      } catch (err) {
+        console.error("Speech Synthesis Error:", err);
       }
     }
 
-    function enableAppAudioOnFirstTouch() {
+    function unlockAndSpeakAudioOnInteraction() {
       if (!hasSpokenWelcomeVoice) {
         speakClassAnnouncement(false);
       }
-      window.removeEventListener('touchstart', enableAppAudioOnFirstTouch);
-      window.removeEventListener('click', enableAppAudioOnFirstTouch);
+      window.removeEventListener('touchstart', unlockAndSpeakAudioOnInteraction);
+      window.removeEventListener('click', unlockAndSpeakAudioOnInteraction);
     }
-    window.addEventListener('touchstart', enableAppAudioOnFirstTouch, { once: true });
-    window.addEventListener('click', enableAppAudioOnFirstTouch, { once: true });
+    window.addEventListener('touchstart', unlockAndSpeakAudioOnInteraction, { once: true });
+    window.addEventListener('click', unlockAndSpeakAudioOnInteraction, { once: true });
 
     function updateLiveDashboard() {
       try {
@@ -3611,7 +3576,7 @@
                   document.getElementById('countdownTimer').innerText = '00:00';
                 } else {
                   document.getElementById('liveClassStatus').innerHTML = `${funnyQuote} &#183; <span style="color:#0284c7;">ends at ${item.end}</span>`;
-                  document.getElementById('countdownTimer').innerText = `${String(Math.floor(remSec / 60)).padStart(2, '0')}:${String(remSec % 60).padStart(2, '0')}`;
+                  document.getElementById('countdownTimer').innerText = `${String(Math.floor(remSec / 60)).padStart(2, '0')}:${String(remainSec % 60).padStart(2, '0')}`;
                 }
               }
             }
@@ -3712,6 +3677,7 @@
   </script>
 </body>
 </html>
+
 
 
 
