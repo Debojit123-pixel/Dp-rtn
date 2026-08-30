@@ -45,30 +45,6 @@
       padding-bottom: 70px;
     }
 
-    #pullToRefreshSpinner {
-      position: fixed;
-      top: -60px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #ffffff;
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.3);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000000;
-      transition: top 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
-      color: #0284c7;
-      font-size: 22px;
-      font-weight: bold;
-    }
-    #pullToRefreshSpinner.spinning {
-      animation: spinRefresh 0.8s linear infinite;
-    }
-    @keyframes spinRefresh { 100% { transform: translateX(-50%) rotate(360deg); } }
-
     #splashScreen {
       position: fixed;
       inset: 0;
@@ -890,8 +866,6 @@
   </style>
 </head>
 <body>
-
-  <div id="pullToRefreshSpinner">&#8635;</div>
 
   <div id="splashScreen">
     <div class="splash-logo-box"><div class="splash-logo-inner">BH</div></div>
@@ -3701,45 +3675,6 @@
       });
     }
 
-    let pullStartY = 0;
-    let isPulling = false;
-    const spinner = document.getElementById('pullToRefreshSpinner');
-
-    window.addEventListener('touchstart', (e) => {
-      if (window.scrollY === 0) {
-        pullStartY = e.touches[0].clientY;
-        isPulling = true;
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchmove', (e) => {
-      if (!isPulling) return;
-      const currentY = e.touches[0].clientY;
-      const distance = currentY - pullStartY;
-      if (distance > 0 && distance < 120 && window.scrollY === 0) {
-        spinner.style.top = `${distance - 40}px`;
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchend', () => {
-      if (!isPulling) return;
-      isPulling = false;
-      if (parseInt(spinner.style.top) > 20) {
-        spinner.style.top = '20px';
-        spinner.classList.add('spinning');
-        setTimeout(() => {
-          updateLiveDashboard();
-          renderFullRoutine();
-          renderStoriesTray();
-          renderPostsFeed();
-          spinner.style.top = '-60px';
-          spinner.classList.remove('spinning');
-        }, 1000);
-      } else {
-        spinner.style.top = '-60px';
-      }
-    });
-
     function initApp() {
       try {
         if (!currentUserName || !currentUsername) {
@@ -3773,4 +3708,5 @@
   </script>
 </body>
 </html>
+
 
