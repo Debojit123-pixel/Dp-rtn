@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -429,17 +428,16 @@
       width: 32px;
       height: 32px;
       border-radius: 50%;
-      object-fit: cover;
-      border: 1.5px solid var(--primary-accent);
       flex-shrink: 0;
       background: var(--primary-accent);
       color: #fff;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+      user-select: none;
     }
 
     .chat-bubble {
@@ -502,7 +500,6 @@
       height: 14px;
       border-radius: 50%;
       border: 1px solid #ffffff;
-      object-fit: cover;
       font-size: 7.5px;
       background: var(--primary-accent);
       color: #fff;
@@ -510,6 +507,7 @@
       align-items: center;
       justify-content: center;
       margin-left: -3px;
+      font-weight: 800;
     }
 
     .typing-indicator {
@@ -942,12 +940,17 @@
 
     let ROUTINE_DATA = validateRoutineObject(parsedRoutine) ? parsedRoutine : JSON.parse(JSON.stringify(DEFAULT_ROUTINE_DATA));
 
-    let userId = localStorage.getItem('bh_user_id') || ('u_' + Math.random().toString(36).substr(2, 9));
-    let currentUserName = localStorage.getItem('bh_user_name') || 'Student';
-    let currentUserAvatar = localStorage.getItem('bh_user_avatar') || '';
-    let globalUserRegistry = JSON.parse(localStorage.getItem('bh_global_users_cache')) || {};
+    let userId = localStorage.getItem('bh_user_id');
+    if (!userId) {
+      userId = 'u_' + Math.random().toString(36).substr(2, 9);
+      localStorage.setItem('bh_user_id', userId);
+    }
 
-    localStorage.setItem('bh_user_id', userId);
+    let currentUserName = localStorage.getItem('bh_user_name');
+    if (!currentUserName || currentUserName === 'Student') {
+      currentUserName = prompt("Enter your name for group chat:", "Student") || ('User_' + Math.floor(Math.random() * 1000));
+      localStorage.setItem('bh_user_name', currentUserName);
+    }
 
     let globalMultiOverrides = JSON.parse(localStorage.getItem('bh_multi_overrides')) || {};
     let isHolidayDeclared = localStorage.getItem('bh_holiday_status') === 'true';
@@ -957,7 +960,7 @@
 
     // MQTT Setup
     const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-      clientId: 'bh_app_' + userId + '_' + Math.floor(Math.random() * 1000),
+      clientId: 'bh_app_' + userId + '_' + Math.floor(Math.random() * 10000),
       clean: true
     });
 
@@ -1037,7 +1040,7 @@
             showTypingNotification(data.name, data.typing);
           }
         } else if (topic === TOPIC_SEEN) {
-          updateMessageSeenStatus(data.msgId, data.userId, data.userName, data.avatar);
+          updateMessageSeenStatus(data.msgId, data.userId, data.userName);
         }
       } catch(e) {}
     });
@@ -1439,17 +1442,14 @@
       const txt = input.value.trim();
       if (!txt) return;
 
-      const userAvatar = currentUserAvatar || (globalUserRegistry[userId] && globalUserRegistry[userId].avatar) || '';
-
       const msgObj = {
         id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
         userId: userId,
         userName: currentUserName,
-        userAvatar: userAvatar,
         text: txt,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         timestamp: Date.now(),
-        seenBy: [{ userId: userId, userName: currentUserName, avatar: userAvatar }]
+        seenBy: [{ userId: userId, userName: currentUserName }]
       };
 
       input.value = '';
@@ -1460,18 +1460,17 @@
     }
 
     function sendSeenAck(msgId) {
-      const userAvatar = currentUserAvatar || (globalUserRegistry[userId] && globalUserRegistry[userId].avatar) || '';
       if (client.connected) {
-        client.publish(TOPIC_SEEN, JSON.stringify({ msgId: msgId, userId: userId, userName: currentUserName, avatar: userAvatar }));
+        client.publish(TOPIC_SEEN, JSON.stringify({ msgId: msgId, userId: userId, userName: currentUserName }));
       }
     }
 
-    function updateMessageSeenStatus(msgId, uId, uName, uAvatar) {
+    function updateMessageSeenStatus(msgId, uId, uName) {
       const msg = chatMessagesCache.find(m => m.id === msgId);
       if (msg) {
         if (!msg.seenBy) msg.seenBy = [];
         if (!msg.seenBy.find(s => s.userId === uId)) {
-          msg.seenBy.push({ userId: uId, userName: uName, avatar: uAvatar });
+          msg.seenBy.push({ userId: uId, userName: uName });
           localStorage.setItem('bh_chat_msgs', JSON.stringify(chatMessagesCache));
           const chatPage = document.getElementById('chatPage');
           if (chatPage && chatPage.classList.contains('active')) {
@@ -1667,13 +1666,14 @@
         row.ontouchend = () => handleMsgTouchEnd();
         row.onclick = () => handleMsgClick(msg.id);
 
-        const avatarSrc = msg.userAvatar || (globalUserRegistry[msg.userId] && globalUserRegistry[msg.userId].avatar) || '';
-        const avatarHtml = avatarSrc ? `<img src="${avatarSrc}" class="chat-avatar">` : `<div class="chat-avatar">${(msg.userName || 'U').charAt(0).toUpperCase()}</div>`;
+        const firstLetter = (msg.userName || 'U').trim().charAt(0).toUpperCase();
+        const avatarHtml = `<div class="chat-avatar">${firstLetter}</div>`;
 
         let seenIconsHtml = '';
         if (msg.seenBy && msg.seenBy.length > 0) {
           seenIconsHtml = `<div class="seen-avatars-row">` + msg.seenBy.map(u => {
-            return u.avatar ? `<img src="${u.avatar}" class="seen-avatar-mini" title="Seen by ${u.userName}">` : `<div class="seen-avatar-mini" title="Seen by ${u.userName}">${(u.userName||'U').charAt(0).toUpperCase()}</div>`;
+            const letter = (u.userName || 'U').trim().charAt(0).toUpperCase();
+            return `<div class="seen-avatar-mini" title="Seen by ${escapeHtml(u.userName)}">${letter}</div>`;
           }).join('') + `</div>`;
         }
 
@@ -1791,6 +1791,7 @@
   </script>
 </body>
 </html>
+
 
 
 
