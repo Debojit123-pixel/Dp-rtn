@@ -1,1794 +1,334 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0284c7">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <title>BH COM ROUTINE & CHAT</title>
-  <!-- MQTT WebSockets Real-time Client -->
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-  <style>
-    :root {
-      --bg-gradient: linear-gradient(180deg, #f0f9ff 0%, #e0f2fe 100%);
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --card-border: rgba(255, 255, 255, 0.9);
-      --primary-accent: #0284c7;
-      --text-dark: #0f172a;
-      --text-muted: #64748b;
-      --status-live: #10b981;
-      --status-cancel: #ef4444;
-      --status-ended: #94a3b8;
-      --soft-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.12);
-      --weather-glow: 0 0 20px rgba(56, 189, 248, 0.25);
-    }
-
-    /* All Weather & Aesthetic Themes */
-    body.weather-cold {
-      --bg-gradient: linear-gradient(180deg, #e0f2fe 0%, #bae6fd 100%);
-      --card-bg: rgba(240, 249, 255, 0.94);
-      --card-border: #ffffff;
-      --primary-accent: #0284c7;
-      --weather-glow: 0 0 25px rgba(186, 230, 253, 0.9);
-    }
-    body.weather-hot {
-      --bg-gradient: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --card-border: #fed7aa;
-      --primary-accent: #ea580c;
-      --weather-glow: 0 0 25px rgba(251, 146, 60, 0.4);
-    }
-    body.weather-rain {
-      --bg-gradient: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
-      --card-bg: rgba(30, 41, 59, 0.95);
-      --card-border: rgba(255, 255, 255, 0.1);
-      --primary-accent: #38bdf8;
-      --text-dark: #f8fafc;
-      --text-muted: #94a3b8;
-      --weather-glow: 0 0 25px rgba(56, 189, 248, 0.3);
-    }
-    body.weather-sunny {
-      --bg-gradient: linear-gradient(180deg, #fefce8 0%, #fef08a 100%);
-      --card-bg: rgba(255, 255, 255, 0.96);
-      --card-border: #fef08a;
-      --primary-accent: #ca8a04;
-      --weather-glow: 0 0 25px rgba(250, 204, 21, 0.45);
-    }
-    body.weather-autumn {
-      --bg-gradient: linear-gradient(180deg, #fff1f2 0%, #ffe4e6 100%);
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --card-border: #fecdd3;
-      --primary-accent: #e11d48;
-      --weather-glow: 0 0 25px rgba(225, 29, 72, 0.3);
-    }
-    body.weather-night {
-      --bg-gradient: linear-gradient(180deg, #090d16 0%, #020617 100%);
-      --card-bg: rgba(15, 23, 42, 0.92);
-      --card-border: rgba(99, 102, 241, 0.25);
-      --primary-accent: #818cf8;
-      --text-dark: #f8fafc;
-      --text-muted: #94a3b8;
-      --weather-glow: 0 0 25px rgba(129, 140, 248, 0.35);
-    }
-    body.weather-cyberpunk {
-      --bg-gradient: linear-gradient(180deg, #180324 0%, #05010a 100%);
-      --card-bg: rgba(36, 10, 52, 0.92);
-      --card-border: #ec4899;
-      --primary-accent: #f43f5e;
-      --text-dark: #fdf4ff;
-      --text-muted: #f472b6;
-      --weather-glow: 0 0 25px rgba(244, 63, 94, 0.5);
-    }
-    body.weather-emerald {
-      --bg-gradient: linear-gradient(180deg, #ecfdf5 0%, #d1fae5 100%);
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --card-border: #a7f3d0;
-      --primary-accent: #059669;
-      --weather-glow: 0 0 25px rgba(5, 150, 105, 0.3);
-    }
-    body.weather-cherry {
-      --bg-gradient: linear-gradient(180deg, #fdf2f8 0%, #fbcfe8 100%);
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --card-border: #f472b6;
-      --primary-accent: #db2777;
-      --weather-glow: 0 0 25px rgba(219, 39, 119, 0.35);
-    }
-    body.weather-sunset {
-      --bg-gradient: linear-gradient(180deg, #fdf4ff 0%, #fed7aa 100%);
-      --card-bg: rgba(255, 255, 255, 0.95);
-      --card-border: #f9a8d4;
-      --primary-accent: #d97706;
-      --weather-glow: 0 0 25px rgba(217, 119, 6, 0.35);
-    }
-    body.weather-aurora {
-      --bg-gradient: linear-gradient(180deg, #064e3b 0%, #0f172a 100%);
-      --card-bg: rgba(6, 78, 59, 0.88);
-      --card-border: #34d399;
-      --primary-accent: #10b981;
-      --text-dark: #f0fdf4;
-      --text-muted: #6ee7b7;
-      --weather-glow: 0 0 25px rgba(52, 211, 153, 0.45);
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      -webkit-tap-highlight-color: transparent;
-    }
-    html, body {
-      background: var(--bg-gradient);
-      color: var(--text-dark);
-      width: 100vw;
-      height: 100vh;
-      height: 100dvh;
-      overflow: hidden;
-      position: relative;
-      transition: background 0.5s ease;
-    }
-    body {
-      display: flex;
-      justify-content: center;
-      padding-top: env(safe-area-inset-top, 0px);
-    }
-
-    #weatherCanvas {
-      position: fixed;
-      inset: 0;
-      width: 100vw;
-      height: 100vh;
-      pointer-events: none;
-      z-index: 1;
-    }
-
-    #splashScreen {
-      position: fixed;
-      inset: 0;
-      background: var(--bg-gradient);
-      z-index: 9999999;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      animation: autoHideSplash 0.4s ease 2.2s forwards;
-    }
-    @keyframes autoHideSplash {
-      to { opacity: 0; visibility: hidden; pointer-events: none; display: none; }
-    }
-    .splash-logo-box {
-      width: 90px;
-      height: 90px;
-      background: #ffffff;
-      border-radius: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 16px 36px rgba(2, 132, 199, 0.25);
-    }
-    .splash-logo-inner {
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, var(--primary-accent) 0%, #0369a1 100%);
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: 800;
-      font-size: 24px;
-    }
-
-    .app-viewport {
-      width: 100vw;
-      max-width: 480px;
-      height: 100vh;
-      height: 100dvh;
-      padding: 12px 14px 75px;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      z-index: 2;
-      overflow: hidden;
-    }
-
-    /* Isolated Pages */
-    .page {
-      display: none !important;
-      width: 100%;
-      height: 100%;
-      overflow-y: auto;
-      overscroll-behavior: contain;
-    }
-    .page.active { 
-      display: flex !important;
-      flex-direction: column;
-      animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-    .top-nav {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    .nav-btn {
-      background: var(--card-bg);
-      border: 1.5px solid var(--card-border);
-      color: var(--text-dark);
-      padding: 8px 12px;
-      border-radius: 14px;
-      font-size: 12px;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      box-shadow: var(--soft-shadow);
-      font-weight: 700;
-      backdrop-filter: blur(10px);
-    }
-
-    /* Routine Cards */
-    .today-card {
-      background: var(--card-bg);
-      border: 2px solid var(--card-border);
-      border-radius: 22px;
-      padding: 18px;
-      box-shadow: var(--weather-glow);
-      margin-bottom: 14px;
-      backdrop-filter: blur(12px);
-      flex-shrink: 0;
-    }
-    .clock-time-badge {
-      background: rgba(2, 132, 199, 0.12);
-      border: 1.5px solid rgba(2, 132, 199, 0.25);
-      color: var(--primary-accent);
-      padding: 8px 16px;
-      border-radius: 16px;
-      display: inline-block;
-      font-size: 22px;
-      font-weight: 900;
-      margin: 8px 0 12px;
-      letter-spacing: 0.5px;
-    }
-    .progress-track {
-      background: rgba(148, 163, 184, 0.25);
-      height: 8px;
-      border-radius: 10px;
-      overflow: hidden;
-      margin-bottom: 8px;
-      position: relative;
-    }
-    .progress-fill {
-      position: absolute;
-      left: 0;
-      top: 0;
-      background: linear-gradient(90deg, var(--primary-accent), #38bdf8);
-      height: 100%;
-      width: 0%;
-      transition: width 0.5s ease-in-out;
-      border-radius: 10px;
-    }
-
-    .status-pill {
-      background: rgba(0, 0, 0, 0.03);
-      border: 1.5px solid var(--card-border);
-      padding: 10px 12px;
-      border-radius: 14px;
-      font-size: 13px;
-      margin: 8px 0 6px;
-      color: var(--primary-accent);
-      font-weight: 700;
-      line-height: 1.4;
-    }
-
-    /* Big Routine Periods */
-    .period-item {
-      background: var(--card-bg);
-      border: 2px solid var(--card-border);
-      padding: 14px 16px;
-      border-radius: 18px;
-      margin-bottom: 10px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      box-shadow: var(--soft-shadow);
-      transition: all 0.25s ease;
-      backdrop-filter: blur(8px);
-      flex-shrink: 0;
-    }
-    .period-item.active {
-      border-color: #10b981;
-      background: rgba(16, 185, 129, 0.12);
-      transform: scale(1.02);
-      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.25);
-    }
-    .period-item.ended {
-      opacity: 0.65;
-      background: rgba(148, 163, 184, 0.15);
-      border-color: rgba(148, 163, 184, 0.3);
-    }
-    .period-item.cancelled {
-      opacity: 0.7;
-      background: rgba(239, 68, 68, 0.1);
-      border-color: rgba(239, 68, 68, 0.4);
-    }
-    .period-item.cancelled .period-sub {
-      text-decoration: line-through;
-    }
-
-    .period-time-col { display: flex; flex-direction: column; gap: 4px; }
-    .period-time-txt { font-size: 15px; font-weight: 800; color: var(--text-dark); }
-    .period-sub-col { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
-    .period-sub { font-size: 17px; font-weight: 900; color: var(--primary-accent); }
-
-    .badge-status {
-      font-size: 10px;
-      font-weight: 800;
-      padding: 3px 8px;
-      border-radius: 8px;
-      text-transform: uppercase;
-    }
-    .badge-live { background: #10b981; color: #ffffff; }
-    .badge-ended { background: #64748b; color: #ffffff; }
-    .badge-cancel { background: #ef4444; color: #ffffff; }
-
-    /* Fixed & Non-Moving Chat Room Layout */
-    #chatPage {
-      height: 100%;
-      display: none;
-      flex-direction: column;
-      position: relative;
-      overflow: hidden;
-    }
-    .chat-header {
-      background: var(--card-bg);
-      border: 1.5px solid var(--card-border);
-      padding: 10px 14px;
-      border-radius: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 6px;
-      box-shadow: var(--soft-shadow);
-      min-height: 50px;
-      flex-shrink: 0;
-    }
-    
-    .chat-action-bar {
-      display: none;
-      align-items: center;
-      gap: 8px;
-      width: 100%;
-      justify-content: space-between;
-    }
-    .chat-action-btn {
-      background: rgba(0,0,0,0.06);
-      border: 1px solid var(--card-border);
-      color: var(--text-dark);
-      padding: 6px 12px;
-      border-radius: 12px;
-      font-size: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .chat-messages-box {
-      flex: 1;
-      overflow-y: auto;
-      padding: 6px 2px 14px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      scroll-behavior: smooth;
-      overscroll-behavior: contain;
-    }
-    
-    .chat-date-divider {
-      align-self: center;
-      background: rgba(148, 163, 184, 0.25);
-      color: var(--text-dark);
-      font-size: 10.5px;
-      font-weight: 800;
-      padding: 3px 10px;
-      border-radius: 10px;
-      margin: 4px 0;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.03);
-      backdrop-filter: blur(4px);
-    }
-
-    .chat-msg-row {
-      display: flex;
-      align-items: flex-end;
-      gap: 6px;
-      width: 100%;
-      padding: 2px 4px;
-      border-radius: 14px;
-      transition: background 0.15s ease;
-      user-select: none;
-    }
-    .chat-msg-row.selected {
-      background: rgba(2, 132, 199, 0.18) !important;
-    }
-    .chat-msg-row.sent {
-      justify-content: flex-end;
-    }
-    .chat-msg-row.received {
-      justify-content: flex-start;
-    }
-
-    .chat-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      flex-shrink: 0;
-      background: var(--primary-accent);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      font-weight: 800;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-      user-select: none;
-    }
-
-    .chat-bubble {
-      max-width: 86%;
-      min-width: 130px;
-      padding: 6px 10px 4px;
-      border-radius: 14px;
-      font-size: 13.5px;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-      line-height: 1.25;
-      display: flex;
-      flex-direction: column;
-      cursor: pointer;
-    }
-    .chat-bubble.sent {
-      background: var(--primary-accent);
-      color: #ffffff;
-      border-bottom-right-radius: 3px;
-    }
-    .chat-bubble.received {
-      background: var(--card-bg);
-      color: var(--text-dark);
-      border: 1px solid var(--card-border);
-      border-bottom-left-radius: 3px;
-    }
-    .chat-sender-title {
-      font-size: 11px;
-      font-weight: 800;
-      margin-bottom: 2px;
-      color: var(--primary-accent);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .chat-bubble.sent .chat-sender-title {
-      color: #e0f2fe;
-    }
-    .chat-text-content {
-      font-size: 13.5px;
-      word-break: break-word;
-    }
-    .chat-footer-row {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 4px;
-      font-size: 9.5px;
-      margin-top: 2px;
-      opacity: 0.85;
-    }
-    .seen-avatars-row {
-      display: flex;
-      align-items: center;
-      gap: -4px;
-      margin-top: 2px;
-      justify-content: flex-end;
-    }
-    .seen-avatar-mini {
-      width: 14px;
-      height: 14px;
-      border-radius: 50%;
-      border: 1px solid #ffffff;
-      font-size: 7.5px;
-      background: var(--primary-accent);
-      color: #fff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin-left: -3px;
-      font-weight: 800;
-    }
-
-    .typing-indicator {
-      font-size: 11px;
-      color: var(--primary-accent);
-      font-style: italic;
-      padding: 2px 8px;
-      min-height: 16px;
-      font-weight: 700;
-      flex-shrink: 0;
-    }
-    .chat-input-bar {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-      background: var(--card-bg);
-      border: 1.5px solid var(--card-border);
-      padding: 6px 10px;
-      border-radius: 20px;
-      box-shadow: var(--soft-shadow);
-      flex-shrink: 0;
-      margin-bottom: 2px;
-    }
-    .chat-input {
-      flex: 1;
-      border: none;
-      outline: none;
-      background: transparent;
-      font-size: 13.5px;
-      color: var(--text-dark);
-    }
-    .chat-send-btn {
-      background: var(--primary-accent);
-      color: #fff;
-      border: none;
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-    }
-
-    /* Floating Arrow Button to Scroll to Latest Messages */
-    #scrollToBottomBtn {
-      position: absolute;
-      right: 14px;
-      bottom: 64px;
-      background: var(--card-bg);
-      border: 1.5px solid var(--primary-accent);
-      color: var(--primary-accent);
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      font-size: 17px;
-      font-weight: 900;
-      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-      cursor: pointer;
-      z-index: 10;
-    }
-
-    /* Bottom Navigation */
-    .bottom-nav-bar {
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 100vw;
-      max-width: 480px;
-      height: 65px;
-      background: var(--card-bg);
-      backdrop-filter: blur(16px);
-      border-top: 1.5px solid var(--card-border);
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-      z-index: 9999;
-      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
-      padding-bottom: env(safe-area-inset-bottom, 0px);
-    }
-    .nav-tab-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 3px;
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 11.5px;
-      font-weight: 700;
-      cursor: pointer;
-      flex: 1;
-      transition: color 0.2s ease;
-    }
-    .nav-tab-item.active { color: var(--primary-accent); }
-    .nav-tab-item svg { width: 22px; height: 22px; stroke-width: 2.3; }
-
-    /* Admin Styles */
-    .admin-box {
-      background: var(--card-bg);
-      border: 1.5px solid var(--card-border);
-      padding: 16px;
-      border-radius: 20px;
-      margin-bottom: 14px;
-      box-shadow: var(--soft-shadow);
-      flex-shrink: 0;
-    }
-    .admin-box h4 { font-size: 13.5px; margin-bottom: 10px; color: var(--primary-accent); font-weight: 800; }
-    .input-field {
-      width: 100%;
-      padding: 12px 14px;
-      margin-bottom: 10px;
-      background: #ffffff;
-      border: 1.5px solid #e2e8f0;
-      border-radius: 14px;
-      color: #0f172a;
-      outline: none;
-      font-size: 13.5px;
-    }
-    .btn-action {
-      background: linear-gradient(135deg, var(--primary-accent) 0%, #0369a1 100%);
-      color: white;
-      border: none;
-      padding: 12px;
-      border-radius: 14px;
-      width: 100%;
-      font-weight: 800;
-      cursor: pointer;
-      font-size: 13.5px;
-    }
-    .btn-secondary {
-      background: var(--card-bg);
-      border: 1.5px solid var(--card-border);
-      color: var(--primary-accent);
-      padding: 10px;
-      border-radius: 14px;
-      width: 100%;
-      cursor: pointer;
-      margin-bottom: 8px;
-      font-weight: 700;
-      font-size: 12.5px;
-    }
-
-    .modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(15, 23, 42, 0.6);
-      backdrop-filter: blur(8px);
-      z-index: 99999;
-      align-items: center;
-      justify-content: center;
-      padding: 14px;
-    }
-    .modal-content {
-      background: #ffffff;
-      padding: 20px;
-      border-radius: 24px;
-      width: 100%;
-      max-width: 380px;
-      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
-    }
-  </style>
-</head>
-<body class="weather-cold">
-
-  <canvas id="weatherCanvas"></canvas>
-
-  <div id="splashScreen">
-    <div class="splash-logo-box"><div class="splash-logo-inner">BH</div></div>
-    <div style="font-size: 20px; font-weight: 900; color: #0284c7; margin-top: 16px;">BH COM ROUTINE</div>
-    <div style="font-size: 11px; color: #64748b; font-weight: 700; margin-top: 4px;">COMMERCE &#183; B.H. COLLEGE</div>
-  </div>
-
-  <div class="app-viewport">
-    
-    <!-- ট্যাব ১: HOME ROUTINE -->
-    <div id="homePage" class="page active">
-      <div class="top-nav">
-        <button class="nav-btn" onclick="openModal('menuModal')">&#9776; Menu</button>
-        <button class="nav-btn" onclick="speakClassAnnouncement(true)" style="background: linear-gradient(135deg, var(--primary-accent), #0369a1); color:#fff; border:none;">
-          &#128266; Listen Voice
-        </button>
-        <button class="nav-btn" onclick="openAdminGate()">&#9881; Admin</button>
-      </div>
-
-      <div class="today-card">
-        <div style="display:flex; justify-content:space-between; align-items:baseline;">
-          <div style="font-size:24px; font-weight:900; color:var(--primary-accent);" id="currentDayName">Today</div>
-          <div style="font-size:12px; color:var(--text-muted); font-weight:700;" id="currentDateStr">--</div>
-        </div>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HS 1st Year Commerce - Study Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Base Styles */
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --secondary: #f59e0b;
+            --bg-color: #f3f4f6;
+            --text-main: #1f2937;
+            --text-light: #6b7280;
+            --card-bg: #ffffff;
+        }
         
-        <div class="clock-time-badge" id="liveClock">--:--:-- --</div>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); }
+        
+        /* Header */
+        header { background: var(--primary); color: white; padding: 1rem 5%; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        header h1 { font-size: 1.5rem; font-weight: 600; }
+        .login-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 500; transition: 0.3s; }
+        .login-btn:hover { background: rgba(255,255,255,0.3); }
 
-        <div class="progress-wrapper">
-          <div class="progress-track"><div class="progress-fill" id="dayProgressBar"></div></div>
-          <div style="font-size:11px; color:var(--text-muted); text-align:right; font-weight:700;" id="progressStatusText">0 / 0 periods done</div>
-        </div>
+        /* Notice Board */
+        .notice-bar { background: var(--secondary); color: white; padding: 10px 5%; font-size: 0.9rem; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .notice-bar span { background: white; color: var(--secondary); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; }
+        
+        /* Main Container */
+        .container { max-width: 1000px; margin: 30px auto; padding: 0 5%; }
+        
+        /* Admin Panel */
+        #admin-panel { display: none; background: var(--card-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); margin-bottom: 30px; border-top: 5px solid var(--primary); }
+        .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .admin-header h2 { color: var(--primary); font-size: 1.3rem; }
+        .logout-btn { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        
+        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        @media(max-width: 768px) { .admin-grid { grid-template-columns: 1fr; } }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; font-size: 0.9rem; transition: 0.3s; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
+        .btn-submit { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 500; width: 100%; transition: 0.3s; }
+        .btn-submit:hover { background: var(--primary-dark); }
 
-        <div class="status-pill" id="liveClassStatus">Loading schedule...</div>
-        <div style="font-size:12px; color:var(--text-muted); font-weight:700;">Time left: <span style="color:var(--primary-accent); font-weight:900;" id="countdownTimer">00:00</span></div>
-      </div>
+        /* Search & Filters */
+        .controls { display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px; }
+        .search-box { width: 100%; padding: 14px; border: none; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); font-size: 1rem; outline: none; }
+        .filters { display: flex; gap: 10px; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 18px; border: none; background: white; color: var(--text-light); border-radius: 20px; cursor: pointer; font-weight: 500; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.3s; }
+        .filter-btn.active { background: var(--primary); color: white; }
 
-      <div style="display:flex; justify-content:space-between; align-items:center; margin:10px 0 12px;">
-        <h3 style="font-size:16px; font-weight:900; color:var(--text-dark);">Today's Schedule</h3>
-      </div>
-      
-      <div id="todayPeriodsList"></div>
+        /* Notes Grid */
+        .notes-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .note-card { background: var(--card-bg); border-radius: 12px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); border-left: 4px solid var(--primary); transition: transform 0.3s; }
+        .note-card:hover { transform: translateY(-5px); }
+        .note-subject { display: inline-block; background: #e0e7ff; color: var(--primary-dark); padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; margin-bottom: 10px; }
+        .note-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 10px; color: var(--text-main); }
+        .note-text { font-size: 0.95rem; color: var(--text-light); line-height: 1.6; white-space: pre-wrap; }
+        .note-date { font-size: 0.75rem; color: #9ca3af; margin-top: 15px; display: block; text-align: right; }
+
+        /* Login Modal */
+        #login-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; }
+        .modal-content h3 { margin-bottom: 20px; text-align: center; color: var(--primary); }
+        .close-modal { float: right; cursor: pointer; font-size: 1.5rem; font-weight: bold; color: #aaa; margin-top: -10px; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>📚 HS 1st Year Commerce</h1>
+        <button class="login-btn" onclick="openLoginModal()" id="auth-btn">Admin Login</button>
+    </header>
+
+    <div class="notice-bar" id="notice-board">
+        <span>NOTICE</span> <marquee id="notice-text">Welcome to HS 1st Year Commerce Study Portal.</marquee>
     </div>
 
-    <!-- ট্যাব ২: REALTIME GROUP CHAT (WHATSAPP STYLE) -->
-    <div id="chatPage" class="page">
-      <div class="chat-header">
-        <!-- Normal Title Mode -->
-        <div id="chatHeaderDefault" style="display:flex; align-items:center; justify-content:space-between; width:100%;">
-          <div>
-            <h3 style="font-size:15px; font-weight:900; color:var(--primary-accent);">Commerce Batch Chat</h3>
-            <p style="font-size:10.5px; color:var(--text-muted); font-weight:700;">Live Classmates Group</p>
-          </div>
-          <div style="font-size:11px; color:#10b981; font-weight:800;" id="onlineUsersTag">&#9679; Live</div>
-        </div>
-
-        <!-- Selection Mode Action Bar -->
-        <div id="chatHeaderAction" class="chat-action-bar">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <button class="chat-action-btn" onclick="clearSelectedMessages()">&#10005;</button>
-            <span id="chatSelectedCount" style="font-weight:800; font-size:13px;">1 Selected</span>
-          </div>
-          <div style="display:flex; gap:6px;">
-            <button id="chatActionCopyBtn" class="chat-action-btn" onclick="copySelectedMessages()">&#128203; Copy</button>
-            <button id="chatActionEditBtn" class="chat-action-btn" onclick="openEditMessageModal()">&#9998; Edit</button>
-            <button id="chatActionDeleteBtn" class="chat-action-btn" style="color:#ef4444;" onclick="deleteSelectedMessages()">&#128465; Delete</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="chat-messages-box" id="chatMessagesContainer" onscroll="handleChatScroll(this)"></div>
-      
-      <!-- Jump to Latest Messages Button -->
-      <button id="scrollToBottomBtn" onclick="scrollToBottom(true)">&#8595;</button>
-
-      <div class="typing-indicator" id="chatTypingStatus"></div>
-
-      <div class="chat-input-bar">
-        <input type="text" id="chatMsgInput" class="chat-input" placeholder="Type a message..." oninput="handleTypingNotification()" onkeypress="if(event.key==='Enter') sendChatMessage()">
-        <button class="chat-send-btn" onclick="sendChatMessage()">&#10148;</button>
-      </div>
-    </div>
-
-    <!-- ট্যাব ৩: FULL ROUTINE -->
-    <div id="routinePage" class="page">
-      <div style="margin-bottom:14px;">
-        <h2 style="font-size: 19px; color: var(--primary-accent); font-weight: 900;">Full Week Timetable</h2>
-        <p style="font-size: 11.5px; color: var(--text-muted); font-weight: 700;">B.H. COLLEGE &#183; COMMERCE</p>
-      </div>
-      <div id="fullWeekContainer"></div>
-    </div>
-
-    <!-- অ্যাডমিন পেজ -->
-    <div id="adminPage" class="page">
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:14px;">
-        <button class="nav-btn" onclick="showPage('homePage')">&#8592; Back</button>
-        <h2 style="font-size: 18px; color: var(--primary-accent); font-weight: 900;">Admin Management</h2>
-      </div>
-
-      <!-- Theme Selector -->
-      <div class="admin-box">
-        <h4>&#9729;&#65039; Weather & Visual Theme Control</h4>
-        <select id="weatherSelect" class="input-field" onchange="changeWeatherTheme(this.value)">
-          <option value="cold">&#10052;&#65039; Cold / Winter (Snow Falling Effect)</option>
-          <option value="rain">&#127783;&#65039; Rain / Storm (Water Droplets Effect)</option>
-          <option value="hot">&#128293; Hot / Summer (Sunbeam Radiance)</option>
-          <option value="sunny">&#9728;&#65039; Clear / Golden Sunshine</option>
-          <option value="autumn">&#127809; Autumn Rose (Floating Petals)</option>
-          <option value="cherry">&#127800; Cherry Blossom (Sakura Petals)</option>
-          <option value="sunset">&#127749; Sunset Glow (Golden Dusk Particles)</option>
-          <option value="night">&#127769; Midnight Galaxy (Cosmic Starfield)</option>
-          <option value="aurora">&#127756; Northern Lights (Emerald Glow)</option>
-          <option value="cyberpunk">&#9889; Cyberpunk Neon (Glowing Grid)</option>
-          <option value="emerald">&#127807; Emerald Nature (Fresh Leaves)</option>
-        </select>
-      </div>
-
-      <!-- Edit Routine & Room Number -->
-      <div class="admin-box">
-        <h4>&#128221; Edit Timetable & Room Number</h4>
-        <select id="editDaySelect" class="input-field" onchange="populatePeriodSelector()">
-          <option value="Monday">Monday</option>
-          <option value="Tuesday">Tuesday</option>
-          <option value="Wednesday">Wednesday</option>
-          <option value="Thursday">Thursday</option>
-          <option value="Friday">Friday</option>
-          <option value="Saturday">Saturday</option>
-        </select>
-        <select id="editPeriodSelect" class="input-field" onchange="loadCurrentSubjectToInput()"></select>
-        <input type="text" id="editSubjectInput" class="input-field" placeholder="Subject / Room No (e.g. ACCY-213)">
-        <button class="btn-action" onclick="saveRoomChange()">Update Routine For All</button>
-        <button class="btn-secondary" style="margin-top:8px; color:#ef4444; border-color:#fca5a5;" onclick="resetRoutineToDefault()">Reset Routine to Default</button>
-      </div>
-
-      <!-- Declare Holiday -->
-      <div class="admin-box">
-        <h4>&#127881; Declare Holiday (Today)</h4>
-        <div style="display:flex; gap:8px;">
-          <button class="btn-action" style="background:#f59e0b;" onclick="setHolidayToday(true)">Declare Holiday</button>
-          <button class="btn-action" style="background:#64748b;" onclick="setHolidayToday(false)">Resume Classes</button>
-        </div>
-      </div>
-
-      <!-- Multi Class Controls -->
-      <div class="admin-box">
-        <h4>&#9888; Multiple Class Controls (Live / Cancel / End)</h4>
-        <div id="adminMultiClassList" style="max-height: 220px; overflow-y: auto; margin-bottom:10px;"></div>
-        <button class="btn-action" style="background:#ef4444;" onclick="resetAllOverrides()">Reset All Overrides</button>
-      </div>
-    </div>
-
-  </div>
-
-  <div class="bottom-nav-bar">
-    <button class="nav-tab-item active" onclick="switchNavTab('homePage', this)">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-      Routine
-    </button>
-    <button class="nav-tab-item" onclick="switchNavTab('chatPage', this)">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-      Message
-    </button>
-    <button class="nav-tab-item" onclick="switchNavTab('routinePage', this)">
-      <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-      Timetable
-    </button>
-  </div>
-
-  <div class="modal" id="adminLoginModal">
-    <div class="modal-content">
-      <h3 style="font-weight: 800; font-size:16px; margin-bottom:12px; color:var(--primary-accent);">Admin Access</h3>
-      <input type="text" id="adminId" class="input-field" placeholder="Admin ID">
-      <input type="password" id="adminPass" class="input-field" placeholder="Password">
-      <button class="btn-action" onclick="verifyAdminLogin()">Login</button>
-    </div>
-  </div>
-
-  <div class="modal" id="menuModal" onclick="if(event.target.id==='menuModal') closeModal('menuModal')">
-    <div class="modal-content">
-      <h3 style="font-weight: 800; font-size:16px; margin-bottom:12px; color:var(--primary-accent);">Menu</h3>
-      <button class="btn-secondary" onclick="closeModal('menuModal'); showPage('routinePage');">Full Week Routine</button>
-      <button class="btn-secondary" onclick="closeModal('menuModal'); openAdminGate();">Admin Panel</button>
-    </div>
-  </div>
-
-  <div class="modal" id="editChatModal" onclick="if(event.target.id==='editChatModal') closeModal('editChatModal')">
-    <div class="modal-content">
-      <h3 style="font-weight: 800; font-size:15px; margin-bottom:10px; color:var(--primary-accent);">Edit Message</h3>
-      <input type="text" id="editChatInput" class="input-field" placeholder="Edit your message...">
-      <button class="btn-action" onclick="submitEditedMessage()">Save Edit</button>
-    </div>
-  </div>
-
-  <script>
-    const DEFAULT_ROUTINE_DATA = {
-      "Monday": [
-        { time: "9:30 AM - 10:30 AM", start: "09:30", end: "10:30", sub: "ACCY-213" },
-        { time: "10:30 AM - 11:30 AM", start: "10:30", end: "11:30", sub: "MIL/ALT-18" },
-        { time: "11:30 AM - 12:30 PM", start: "11:30", end: "12:30", sub: "BUST-213" },
-        { time: "12:30 PM - 1:30 PM", start: "12:30", end: "13:30", sub: "ECON-213 / MATH-18" },
-        { time: "1:30 PM - 2:30 PM", start: "13:30", end: "14:30", sub: "BANK-213" },
-        { time: "2:30 PM - 3:30 PM", start: "14:30", end: "15:30", sub: "\u2014" }
-      ],
-      "Tuesday": [
-        { time: "9:30 AM - 10:30 AM", start: "09:30", end: "10:30", sub: "BUST-213" },
-        { time: "10:30 AM - 11:30 AM", start: "10:30", end: "11:30", sub: "BMST-20 / Tourism" },
-        { time: "11:30 AM - 12:30 PM", start: "11:30", end: "12:30", sub: "ECON-213 / MATH-18" },
-        { time: "12:30 PM - 1:30 PM", start: "12:30", end: "13:30", sub: "MIL/ALTE-18" },
-        { time: "1:30 PM - 2:30 PM", start: "13:30", end: "14:30", sub: "ENG-213" },
-        { time: "2:30 PM - 3:30 PM", start: "14:30", end: "15:30", sub: "ACCY-213" }
-      ],
-      "Wednesday": [
-        { time: "9:30 AM - 10:30 AM", start: "09:30", end: "10:30", sub: "BANK-213" },
-        { time: "10:30 AM - 11:30 AM", start: "10:30", end: "11:30", sub: "ENGL-213" },
-        { time: "11:30 AM - 12:30 PM", start: "11:30", end: "12:30", sub: "BMST-20 / Tourism / COSC-NLB-1" },
-        { time: "12:30 PM - 1:30 PM", start: "12:30", end: "13:30", sub: "ECON-213 / MATH-18" },
-        { time: "1:30 PM - 2:30 PM", start: "13:30", end: "14:30", sub: "BUST-213" },
-        { time: "2:30 PM - 3:30 PM", start: "14:30", end: "15:30", sub: "\u2014" }
-      ],
-      "Thursday": [
-        { time: "9:30 AM - 10:30 AM", start: "09:30", end: "10:30", sub: "BUST-213" },
-        { time: "10:30 AM - 11:30 AM", start: "10:30", end: "11:30", sub: "ACCY-213" },
-        { time: "11:30 AM - 12:30 PM", start: "11:30", end: "12:30", sub: "ENG-213" },
-        { time: "12:30 PM - 1:30 PM", start: "12:30", end: "13:30", sub: "MIL/ALTE-18" },
-        { time: "1:30 PM - 2:30 PM", start: "13:30", end: "14:30", sub: "BANK-213" },
-        { time: "2:30 PM - 3:30 PM", start: "14:30", end: "15:30", sub: "\u2014" }
-      ],
-      "Friday": [
-        { time: "9:30 AM - 10:30 AM", start: "09:30", end: "10:30", sub: "BANK-213" },
-        { time: "10:30 AM - 11:30 AM", start: "10:30", end: "11:30", sub: "ECO-213 + Maths" },
-        { time: "11:30 AM - 12:30 PM", start: "11:30", end: "12:30", sub: "BMST-20 / Tourism" },
-        { time: "12:30 PM - 1:30 PM", start: "12:30", end: "13:30", sub: "MIL/ALT-18" },
-        { time: "1:30 PM - 2:30 PM", start: "13:30", end: "14:30", sub: "ACCY-213" },
-        { time: "2:30 PM - 3:30 PM", start: "14:30", end: "15:30", sub: "\u2014" }
-      ],
-      "Saturday": [
-        { time: "9:30 AM - 10:30 AM", start: "09:30", end: "10:30", sub: "ENGL-213" },
-        { time: "10:30 AM - 11:30 AM", start: "10:30", end: "11:30", sub: "ACCY-213" },
-        { time: "11:30 AM - 12:30 PM", start: "11:30", end: "12:30", sub: "ECO-213 + Maths" },
-        { time: "12:30 PM - 1:30 PM", start: "12:30", end: "13:30", sub: "BMST-20 / Tourism" },
-        { time: "1:30 PM - 2:30 PM", start: "13:30", end: "14:30", sub: "BUST-213" },
-        { time: "2:30 PM - 3:30 PM", start: "14:30", end: "15:30", sub: "BANK-213" }
-      ],
-      "Sunday": []
-    };
-
-    function validateRoutineObject(data) {
-      if (!data || typeof data !== 'object') return false;
-      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      for (let day of days) {
-        if (!Array.isArray(data[day]) || data[day].length === 0) return false;
-      }
-      return true;
-    }
-
-    let parsedRoutine = null;
-    try {
-      parsedRoutine = JSON.parse(localStorage.getItem('bh_custom_routine'));
-    } catch(e) { parsedRoutine = null; }
-
-    let ROUTINE_DATA = validateRoutineObject(parsedRoutine) ? parsedRoutine : JSON.parse(JSON.stringify(DEFAULT_ROUTINE_DATA));
-
-    let userId = localStorage.getItem('bh_user_id');
-    if (!userId) {
-      userId = 'u_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('bh_user_id', userId);
-    }
-
-    let currentUserName = localStorage.getItem('bh_user_name');
-    if (!currentUserName || currentUserName === 'Student') {
-      currentUserName = prompt("Enter your name for group chat:", "Student") || ('User_' + Math.floor(Math.random() * 1000));
-      localStorage.setItem('bh_user_name', currentUserName);
-    }
-
-    let globalMultiOverrides = JSON.parse(localStorage.getItem('bh_multi_overrides')) || {};
-    let isHolidayDeclared = localStorage.getItem('bh_holiday_status') === 'true';
-    let chatMessagesCache = JSON.parse(localStorage.getItem('bh_chat_msgs')) || [];
-    let currentWeatherTheme = localStorage.getItem('bh_weather_theme') || 'autumn';
-    let selectedMsgIds = new Set();
-
-    // MQTT Setup
-    const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt', {
-      clientId: 'bh_app_' + userId + '_' + Math.floor(Math.random() * 10000),
-      clean: true
-    });
-
-    const TOPIC_MULTI_OVERRIDE = 'bhcom2026/multi_override';
-    const TOPIC_HOLIDAY = 'bhcom2026/holiday_status';
-    const TOPIC_WEATHER = 'bhcom2026/weather_theme';
-    const TOPIC_CHAT = 'bhcom2026/group_chat';
-    const TOPIC_TYPING = 'bhcom2026/chat_typing';
-    const TOPIC_SEEN = 'bhcom2026/chat_seen';
-    const TOPIC_ROUTINE = 'bhcom2026/custom_routine';
-    const TOPIC_DELETE_MSG = 'bhcom2026/delete_msg';
-    const TOPIC_EDIT_MSG = 'bhcom2026/edit_msg';
-
-    client.on('connect', () => {
-      client.subscribe([
-        TOPIC_MULTI_OVERRIDE, TOPIC_HOLIDAY, TOPIC_WEATHER, 
-        TOPIC_CHAT, TOPIC_TYPING, TOPIC_SEEN, TOPIC_ROUTINE, 
-        TOPIC_DELETE_MSG, TOPIC_EDIT_MSG
-      ]);
-      applyWeatherTheme(currentWeatherTheme);
-    });
-
-    client.on('message', (topic, message) => {
-      try {
-        const data = JSON.parse(message.toString());
-        if (topic === TOPIC_MULTI_OVERRIDE) {
-          globalMultiOverrides = data;
-          localStorage.setItem('bh_multi_overrides', JSON.stringify(data));
-          updateLiveDashboard();
-          renderAdminMultiControls();
-        } else if (topic === TOPIC_HOLIDAY) {
-          isHolidayDeclared = data.isHoliday;
-          localStorage.setItem('bh_holiday_status', isHolidayDeclared);
-          updateLiveDashboard();
-        } else if (topic === TOPIC_WEATHER) {
-          currentWeatherTheme = data.theme;
-          applyWeatherTheme(data.theme);
-        } else if (topic === TOPIC_ROUTINE) {
-          if (validateRoutineObject(data)) {
-            ROUTINE_DATA = data;
-            localStorage.setItem('bh_custom_routine', JSON.stringify(data));
-            renderFullRoutine();
-            populatePeriodSelector();
-            updateLiveDashboard();
-          }
-        } else if (topic === TOPIC_CHAT) {
-          if (!chatMessagesCache.find(m => m.id === data.id)) {
-            chatMessagesCache.push(data);
-            localStorage.setItem('bh_chat_msgs', JSON.stringify(chatMessagesCache));
-            
-            const chatPage = document.getElementById('chatPage');
-            if (chatPage && chatPage.classList.contains('active')) {
-              renderChatMessages();
-              scrollToBottom();
-            }
-            sendSeenAck(data.id);
-          }
-        } else if (topic === TOPIC_DELETE_MSG) {
-          if (data && data.ids) {
-            chatMessagesCache = chatMessagesCache.filter(m => !data.ids.includes(m.id));
-            localStorage.setItem('bh_chat_msgs', JSON.stringify(chatMessagesCache));
-            clearSelectedMessages();
-            renderChatMessages();
-          }
-        } else if (topic === TOPIC_EDIT_MSG) {
-          if (data && data.id) {
-            const target = chatMessagesCache.find(m => m.id === data.id);
-            if (target) {
-              target.text = data.newText;
-              target.edited = true;
-              localStorage.setItem('bh_chat_msgs', JSON.stringify(chatMessagesCache));
-              renderChatMessages();
-            }
-          }
-        } else if (topic === TOPIC_TYPING) {
-          if (data.userId !== userId) {
-            showTypingNotification(data.name, data.typing);
-          }
-        } else if (topic === TOPIC_SEEN) {
-          updateMessageSeenStatus(data.msgId, data.userId, data.userName);
-        }
-      } catch(e) {}
-    });
-
-    /* Theme-Specific Particle Engine */
-    const canvas = document.getElementById('weatherCanvas');
-    const ctx = canvas.getContext('2d');
-    let particles = [];
-    let touchParticles = [];
-
-    function resizeCanvas() {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
-
-    function initWeatherParticles(theme) {
-      particles = [];
-      let count = 18;
-      if (theme === 'rain') count = 45;
-      if (theme === 'cold') count = 25;
-      if (theme === 'night') count = 30;
-
-      for(let i = 0; i < count; i++) {
-        particles.push(createThemeParticle(theme));
-      }
-    }
-
-    function createThemeParticle(theme, x = null, y = null, isInteractive = false) {
-      const pX = x !== null ? x : Math.random() * canvas.width;
-      const pY = y !== null ? y : Math.random() * canvas.height;
-      return {
-        x: pX,
-        y: pY,
-        radius: isInteractive ? (Math.random() * 3 + 2) : (Math.random() * 2.5 + 1),
-        speedY: isInteractive ? (Math.random() * 2 - 1) : (theme === 'rain' ? Math.random() * 5 + 5 : Math.random() * 1.2 + 0.5),
-        speedX: isInteractive ? (Math.random() * 2 - 1) : ((theme === 'autumn' || theme === 'cherry') ? Math.random() * 1.5 - 0.75 : Math.random() * 0.8 - 0.4),
-        opacity: isInteractive ? 1 : (Math.random() * 0.6 + 0.2),
-        rot: Math.random() * 360,
-        color: theme === 'cyberpunk' ? (Math.random() > 0.5 ? '#f43f5e' : '#38bdf8') : '',
-        life: 1
-      };
-    }
-
-    /* Spawn Theme-Accurate Interactive Objects */
-    function spawnThemeTouchParticles(x, y, count = 6) {
-      for (let i = 0; i < count; i++) {
-        touchParticles.push(createThemeParticle(currentWeatherTheme, x + (Math.random() * 24 - 12), y + (Math.random() * 24 - 12), true));
-      }
-    }
-
-    window.addEventListener('touchmove', (e) => {
-      if (e.touches && e.touches[0]) {
-        spawnThemeTouchParticles(e.touches[0].clientX, e.touches[0].clientY, 4);
-      }
-    }, { passive: true });
-
-    window.addEventListener('touchstart', (e) => {
-      if (e.touches && e.touches[0]) {
-        spawnThemeTouchParticles(e.touches[0].clientX, e.touches[0].clientY, 8);
-      }
-    }, { passive: true });
-
-    window.addEventListener('mousemove', (e) => {
-      if (e.buttons === 1) {
-        spawnThemeTouchParticles(e.clientX, e.clientY, 3);
-      }
-    });
-
-    function renderParticle(p, theme) {
-      ctx.beginPath();
-      if (theme === 'cold') {
-        ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
-        ctx.arc(p.x, p.y, p.radius * 1.2, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (theme === 'rain') {
-        ctx.strokeStyle = `rgba(56, 189, 248, ${p.opacity})`;
-        ctx.lineWidth = 1.6;
-        ctx.moveTo(p.x, p.y);
-        ctx.lineTo(p.x + p.speedX, p.y + p.speedY * 2.2);
-        ctx.stroke();
-      } else if (theme === 'autumn') {
-        ctx.fillStyle = `rgba(225, 29, 72, ${p.opacity})`;
-        ctx.ellipse(p.x, p.y, p.radius * 2.2, p.radius, p.rot, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (theme === 'cherry') {
-        ctx.fillStyle = `rgba(244, 114, 182, ${p.opacity})`;
-        ctx.ellipse(p.x, p.y, p.radius * 2, p.radius * 1.2, p.rot, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (theme === 'sunset') {
-        ctx.fillStyle = `rgba(251, 146, 60, ${p.opacity * 0.75})`;
-        ctx.arc(p.x, p.y, p.radius * 1.3, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (theme === 'aurora') {
-        ctx.fillStyle = `rgba(52, 211, 153, ${p.opacity * 0.75})`;
-        ctx.arc(p.x, p.y, p.radius * 1.5, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (theme === 'night') {
-        ctx.fillStyle = `rgba(255, 255, 255, ${p.opacity})`;
-        ctx.arc(p.x, p.y, p.radius * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (theme === 'cyberpunk') {
-        ctx.fillStyle = p.color;
-        ctx.rect(p.x, p.y, p.radius * 1.5, p.radius * 1.5);
-        ctx.fill();
-      } else if (theme === 'emerald') {
-        ctx.fillStyle = `rgba(16, 185, 129, ${p.opacity * 0.55})`;
-        ctx.arc(p.x, p.y, p.radius * 1.3, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (theme === 'hot' || theme === 'sunny') {
-        ctx.fillStyle = `rgba(250, 204, 21, ${p.opacity * 0.6})`;
-        ctx.arc(p.x, p.y, p.radius * 1.2, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    function animateWeather() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
-      // Ambient Falling Particles
-      particles.forEach(p => {
-        renderParticle(p, currentWeatherTheme);
-        p.y += p.speedY;
-        p.x += p.speedX;
-        if (p.y > canvas.height) p.y = -10;
-        if (p.x > canvas.width) p.x = 0;
-        if (p.x < 0) p.x = canvas.width;
-      });
-
-      // Interactive Touch & Follow Particles
-      for (let i = touchParticles.length - 1; i >= 0; i--) {
-        const tp = touchParticles[i];
-        renderParticle(tp, currentWeatherTheme);
-
-        tp.x += tp.speedX;
-        tp.y += tp.speedY;
-        tp.opacity -= 0.025;
-        tp.radius *= 0.96;
-
-        if (tp.opacity <= 0 || tp.radius <= 0.4) {
-          touchParticles.splice(i, 1);
-        }
-      }
-
-      requestAnimationFrame(animateWeather);
-    }
-    animateWeather();
-
-    function applyWeatherTheme(theme) {
-      document.body.className = `weather-${theme}`;
-      const sel = document.getElementById('weatherSelect');
-      if (sel) sel.value = theme;
-      initWeatherParticles(theme);
-      localStorage.setItem('bh_weather_theme', theme);
-    }
-
-    function changeWeatherTheme(theme) {
-      applyWeatherTheme(theme);
-      if (client.connected) client.publish(TOPIC_WEATHER, JSON.stringify({ theme: theme }), { retain: true });
-    }
-
-    /* Timetable & Room Editing */
-    function populatePeriodSelector() {
-      const day = document.getElementById('editDaySelect').value;
-      const periodSelect = document.getElementById('editPeriodSelect');
-      if (!periodSelect) return;
-      periodSelect.innerHTML = '';
-
-      const periods = (ROUTINE_DATA && ROUTINE_DATA[day]) ? ROUTINE_DATA[day] : [];
-      periods.forEach((p, idx) => {
-        const opt = document.createElement('option');
-        opt.value = idx;
-        opt.innerText = `${p.time} (${p.sub})`;
-        periodSelect.appendChild(opt);
-      });
-      loadCurrentSubjectToInput();
-    }
-
-    function loadCurrentSubjectToInput() {
-      const day = document.getElementById('editDaySelect').value;
-      const idx = document.getElementById('editPeriodSelect').value;
-      if (ROUTINE_DATA && ROUTINE_DATA[day] && ROUTINE_DATA[day][idx]) {
-        document.getElementById('editSubjectInput').value = ROUTINE_DATA[day][idx].sub;
-      }
-    }
-
-    function saveRoomChange() {
-      const day = document.getElementById('editDaySelect').value;
-      const idx = document.getElementById('editPeriodSelect').value;
-      const newSub = document.getElementById('editSubjectInput').value.trim();
-
-      if (!newSub) return;
-      if (!ROUTINE_DATA[day]) ROUTINE_DATA[day] = [];
-      ROUTINE_DATA[day][idx].sub = newSub;
-      localStorage.setItem('bh_custom_routine', JSON.stringify(ROUTINE_DATA));
-
-      if (client.connected) {
-        client.publish(TOPIC_ROUTINE, JSON.stringify(ROUTINE_DATA), { retain: true });
-      }
-
-      renderFullRoutine();
-      populatePeriodSelector();
-      renderAdminMultiControls();
-      updateLiveDashboard();
-      alert(`Updated: ${day} period set to "${newSub}" for all!`);
-    }
-
-    function resetRoutineToDefault() {
-      if (confirm("Reset routine to default timetable?")) {
-        ROUTINE_DATA = JSON.parse(JSON.stringify(DEFAULT_ROUTINE_DATA));
-        localStorage.setItem('bh_custom_routine', JSON.stringify(ROUTINE_DATA));
-        if (client.connected) {
-          client.publish(TOPIC_ROUTINE, JSON.stringify(ROUTINE_DATA), { retain: true });
-        }
-        renderFullRoutine();
-        populatePeriodSelector();
-        renderAdminMultiControls();
-        updateLiveDashboard();
-        alert("Routine reset to default!");
-      }
-    }
-
-    /* Live Routine Calculation */
-    function updateLiveDashboard() {
-      const now = new Date();
-      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-      const currentDay = days[now.getDay()];
-
-      document.getElementById('currentDayName').innerText = currentDay;
-      document.getElementById('currentDateStr').innerText = `${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`;
-
-      let hours = now.getHours();
-      const minutes = String(now.getMinutes()).padStart(2, '0');
-      const seconds = String(now.getSeconds()).padStart(2, '0');
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12 || 12;
-      document.getElementById('liveClock').innerText = `${hours}:${minutes}:${seconds} ${ampm}`;
-
-      const todayList = (ROUTINE_DATA && ROUTINE_DATA[currentDay]) ? ROUTINE_DATA[currentDay] : [];
-      const listCont = document.getElementById('todayPeriodsList');
-      listCont.innerHTML = '';
-
-      if (isHolidayDeclared) {
-        document.getElementById('liveClassStatus').innerHTML = `<strong>&#127881; HOLIDAY TODAY!</strong> College is closed by Admin.`;
-        document.getElementById('countdownTimer').innerText = '00:00';
-        document.getElementById('dayProgressBar').style.width = '100%';
-        document.getElementById('progressStatusText').innerText = 'Holiday Declared';
-        listCont.innerHTML = `<div class="period-item" style="text-align:center; justify-content:center; color:var(--primary-accent); font-weight:800; font-size:16px;">&#127881; Today is a Holiday</div>`;
-        return;
-      }
-
-      if (todayList.length === 0) {
-        document.getElementById('liveClassStatus').innerHTML = `<strong>Sunday Holiday!</strong> Enjoy your weekend.`;
-        document.getElementById('countdownTimer').innerText = '00:00';
-        document.getElementById('dayProgressBar').style.width = '100%';
-        document.getElementById('progressStatusText').innerText = 'No classes today';
-        listCont.innerHTML = `<div class="period-item" style="text-align:center; justify-content:center; color:var(--primary-accent); font-weight:800; font-size:16px;">&#127881; Sunday Holiday</div>`;
-        return;
-      }
-
-      const currentMinutes = now.getHours() * 60 + now.getMinutes();
-      const currentSeconds = now.getSeconds();
-      let completedCount = 0;
-      let activeFound = false;
-
-      todayList.forEach(item => {
-        const [sh, sm] = item.start.split(':').map(Number);
-        const [eh, em] = item.end.split(':').map(Number);
-        const startMin = sh * 60 + sm;
-        const endMin = eh * 60 + em;
-
-        const override = globalMultiOverrides[item.sub] || 'NORMAL';
-        let isEnded = (currentMinutes >= endMin) || (override === 'ENDED');
-        let isLive = (currentMinutes >= startMin && currentMinutes < endMin && override !== 'ENDED' && override !== 'CANCELLED') || (override === 'LIVE');
-        let isCancelled = (override === 'CANCELLED');
-
-        if (isEnded && !isCancelled) completedCount++;
-
-        let badgeHtml = '';
-        if (isCancelled) badgeHtml = `<span class="badge-status badge-cancel">Cancelled</span>`;
-        else if (isLive) {
-          badgeHtml = `<span class="badge-status badge-live">Live</span>`;
-          activeFound = true;
-          const remSec = (endMin * 60) - (currentMinutes * 60 + currentSeconds);
-          document.getElementById('liveClassStatus').innerHTML = `Current Class: <strong>${item.sub}</strong> is running`;
-          document.getElementById('countdownTimer').innerText = `${String(Math.max(0, Math.floor(remSec / 60))).padStart(2, '0')}:${String(Math.max(0, remSec % 60)).padStart(2, '0')}`;
-        } else if (isEnded) {
-          badgeHtml = `<span class="badge-status badge-ended">Ended</span>`;
-        }
-
-        const div = document.createElement('div');
-        div.className = `period-item ${isLive ? 'active' : ''} ${isEnded && !isLive ? 'ended' : ''} ${isCancelled ? 'cancelled' : ''}`;
-        div.innerHTML = `
-          <div class="period-time-col">
-            <span class="period-time-txt">${item.time}</span>
-            <span style="font-size:11.5px; color:var(--text-muted); font-weight:700;">H.S. First Year</span>
-          </div>
-          <div class="period-sub-col">
-            <span class="period-sub">${escapeHtml(item.sub)}</span>
-            ${badgeHtml}
-          </div>
-        `;
-        listCont.appendChild(div);
-      });
-
-      if (!activeFound) {
-        document.getElementById('liveClassStatus').innerHTML = `All scheduled classes completed or not started yet.`;
-        document.getElementById('countdownTimer').innerText = '00:00';
-      }
-
-      const pct = (completedCount / todayList.length) * 100;
-      document.getElementById('dayProgressBar').style.width = `${pct}%`;
-      document.getElementById('progressStatusText').innerText = `${completedCount} / ${todayList.length} periods completed`;
-    }
-
-    /* Admin Multi-Class Controls */
-    function renderAdminMultiControls() {
-      const container = document.getElementById('adminMultiClassList');
-      container.innerHTML = '';
-      const now = new Date();
-      const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      const todayClasses = ROUTINE_DATA[days[now.getDay()]] || [];
-
-      todayClasses.forEach(item => {
-        if (item.sub === '\u2014') return;
-        const currentStatus = globalMultiOverrides[item.sub] || 'NORMAL';
-        const row = document.createElement('div');
-        row.style.cssText = "display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(0,0,0,0.06); font-size:13px;";
-        row.innerHTML = `
-          <strong>${escapeHtml(item.sub)}</strong>
-          <div style="display:flex; gap:5px;">
-            <button style="padding:5px 8px; border-radius:8px; border:none; background:${currentStatus==='LIVE'?'#10b981':'#e2e8f0'}; color:${currentStatus==='LIVE'?'#fff':'#000'}; font-weight:800; cursor:pointer;" onclick="setSpecificClassOverride('${item.sub}', 'LIVE')">Live</button>
-            <button style="padding:5px 8px; border-radius:8px; border:none; background:${currentStatus==='ENDED'?'#64748b':'#e2e8f0'}; color:${currentStatus==='ENDED'?'#fff':'#000'}; font-weight:800; cursor:pointer;" onclick="setSpecificClassOverride('${item.sub}', 'ENDED')">End</button>
-            <button style="padding:5px 8px; border-radius:8px; border:none; background:${currentStatus==='CANCELLED'?'#ef4444':'#e2e8f0'}; color:${currentStatus==='CANCELLED'?'#fff':'#000'}; font-weight:800; cursor:pointer;" onclick="setSpecificClassOverride('${item.sub}', 'CANCELLED')">Cancel</button>
-          </div>
-        `;
-        container.appendChild(row);
-      });
-    }
-
-    function setSpecificClassOverride(sub, status) {
-      globalMultiOverrides[sub] = status;
-      if (client.connected) client.publish(TOPIC_MULTI_OVERRIDE, JSON.stringify(globalMultiOverrides), { retain: true });
-      updateLiveDashboard();
-      renderAdminMultiControls();
-    }
-
-    function resetAllOverrides() {
-      globalMultiOverrides = {};
-      if (client.connected) client.publish(TOPIC_MULTI_OVERRIDE, JSON.stringify(globalMultiOverrides), { retain: true });
-      updateLiveDashboard();
-      renderAdminMultiControls();
-    }
-
-    function setHolidayToday(flag) {
-      isHolidayDeclared = flag;
-      if (client.connected) client.publish(TOPIC_HOLIDAY, JSON.stringify({ isHoliday: flag }), { retain: true });
-      updateLiveDashboard();
-      alert(flag ? "Holiday Declared for Today!" : "Classes Resumed!");
-    }
-
-    /* WhatsApp Style Realtime Group Chat System */
-    let typingTimeout = null;
-    function handleTypingNotification() {
-      if (client.connected) {
-        client.publish(TOPIC_TYPING, JSON.stringify({ userId: userId, name: currentUserName, typing: true }));
-        clearTimeout(typingTimeout);
-        typingTimeout = setTimeout(() => {
-          client.publish(TOPIC_TYPING, JSON.stringify({ userId: userId, name: currentUserName, typing: false }));
-        }, 1500);
-      }
-    }
-
-    function showTypingNotification(name, isTyping) {
-      const el = document.getElementById('chatTypingStatus');
-      el.innerText = isTyping ? `${name} is typing...` : '';
-    }
-
-    function formatMessageDateHeader(timestamp) {
-      const msgDate = new Date(timestamp);
-      const today = new Date();
-      const yesterday = new Date();
-      yesterday.setDate(today.getDate() - 1);
-
-      if (msgDate.toDateString() === today.toDateString()) {
-        return "Today";
-      } else if (msgDate.toDateString() === yesterday.toDateString()) {
-        return "Yesterday";
-      } else {
-        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        return `${msgDate.getDate()} ${months[msgDate.getMonth()]} ${msgDate.getFullYear()}`;
-      }
-    }
-
-    function sendChatMessage() {
-      const input = document.getElementById('chatMsgInput');
-      const txt = input.value.trim();
-      if (!txt) return;
-
-      const msgObj = {
-        id: 'msg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-        userId: userId,
-        userName: currentUserName,
-        text: txt,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        timestamp: Date.now(),
-        seenBy: [{ userId: userId, userName: currentUserName }]
-      };
-
-      input.value = '';
-      if (client.connected) {
-        client.publish(TOPIC_CHAT, JSON.stringify(msgObj));
-        client.publish(TOPIC_TYPING, JSON.stringify({ userId: userId, name: currentUserName, typing: false }));
-      }
-    }
-
-    function sendSeenAck(msgId) {
-      if (client.connected) {
-        client.publish(TOPIC_SEEN, JSON.stringify({ msgId: msgId, userId: userId, userName: currentUserName }));
-      }
-    }
-
-    function updateMessageSeenStatus(msgId, uId, uName) {
-      const msg = chatMessagesCache.find(m => m.id === msgId);
-      if (msg) {
-        if (!msg.seenBy) msg.seenBy = [];
-        if (!msg.seenBy.find(s => s.userId === uId)) {
-          msg.seenBy.push({ userId: uId, userName: uName });
-          localStorage.setItem('bh_chat_msgs', JSON.stringify(chatMessagesCache));
-          const chatPage = document.getElementById('chatPage');
-          if (chatPage && chatPage.classList.contains('active')) {
-            renderChatMessages();
-          }
-        }
-      }
-    }
-
-    /* Long Press, Selection & Actions */
-    let pressTimer = null;
-
-    function handleMsgTouchStart(msgId) {
-      pressTimer = setTimeout(() => {
-        toggleSelectMessage(msgId);
-      }, 450);
-    }
-
-    function handleMsgTouchEnd() {
-      clearTimeout(pressTimer);
-    }
-
-    function handleMsgClick(msgId) {
-      if (selectedMsgIds.size > 0) {
-        toggleSelectMessage(msgId);
-      }
-    }
-
-    function toggleSelectMessage(msgId) {
-      if (selectedMsgIds.has(msgId)) {
-        selectedMsgIds.delete(msgId);
-      } else {
-        selectedMsgIds.add(msgId);
-      }
-      updateChatHeaderActionState();
-      renderChatMessages();
-    }
-
-    function clearSelectedMessages() {
-      selectedMsgIds.clear();
-      updateChatHeaderActionState();
-      renderChatMessages();
-    }
-
-    function updateChatHeaderActionState() {
-      const defaultHeader = document.getElementById('chatHeaderDefault');
-      const actionHeader = document.getElementById('chatHeaderAction');
-      const countEl = document.getElementById('chatSelectedCount');
-      const editBtn = document.getElementById('chatActionEditBtn');
-      const deleteBtn = document.getElementById('chatActionDeleteBtn');
-
-      if (selectedMsgIds.size > 0) {
-        defaultHeader.style.display = 'none';
-        actionHeader.style.display = 'flex';
-        countEl.innerText = `${selectedMsgIds.size} Selected`;
-
-        let allMine = true;
-        selectedMsgIds.forEach(id => {
-          const m = chatMessagesCache.find(x => x.id === id);
-          if (m && m.userId !== userId) allMine = false;
-        });
-
-        editBtn.style.display = (selectedMsgIds.size === 1 && allMine) ? 'flex' : 'none';
-        deleteBtn.style.display = allMine ? 'flex' : 'none';
-      } else {
-        defaultHeader.style.display = 'flex';
-        actionHeader.style.display = 'none';
-      }
-    }
-
-    function copySelectedMessages() {
-      const texts = [];
-      chatMessagesCache.forEach(m => {
-        if (selectedMsgIds.has(m.id)) {
-          texts.push(`${m.userName}: ${m.text}`);
-        }
-      });
-      if (texts.length > 0) {
-        navigator.clipboard.writeText(texts.join('\n')).then(() => {
-          alert("Copied to clipboard!");
-          clearSelectedMessages();
-        }).catch(() => {
-          alert("Copied!");
-          clearSelectedMessages();
-        });
-      }
-    }
-
-    function deleteSelectedMessages() {
-      if (confirm(`Delete ${selectedMsgIds.size} message(s)?`)) {
-        const idsToDelete = Array.from(selectedMsgIds);
-        chatMessagesCache = chatMessagesCache.filter(m => !idsToDelete.includes(m.id));
-        localStorage.setItem('bh_chat_msgs', JSON.stringify(chatMessagesCache));
-
-        if (client.connected) {
-          client.publish(TOPIC_DELETE_MSG, JSON.stringify({ ids: idsToDelete }));
-        }
-        clearSelectedMessages();
-        renderChatMessages();
-      }
-    }
-
-    let activeEditingMsgId = null;
-    function openEditMessageModal() {
-      const singleId = Array.from(selectedMsgIds)[0];
-      const m = chatMessagesCache.find(x => x.id === singleId);
-      if (m && m.userId === userId) {
-        activeEditingMsgId = singleId;
-        document.getElementById('editChatInput').value = m.text;
-        openModal('editChatModal');
-      }
-    }
-
-    function submitEditedMessage() {
-      const newTxt = document.getElementById('editChatInput').value.trim();
-      if (!newTxt) return;
-      const m = chatMessagesCache.find(x => x.id === activeEditingMsgId);
-      if (m) {
-        m.text = newTxt;
-        m.edited = true;
-        localStorage.setItem('bh_chat_msgs', JSON.stringify(chatMessagesCache));
-        if (client.connected) {
-          client.publish(TOPIC_EDIT_MSG, JSON.stringify({ id: activeEditingMsgId, newText: newTxt }));
-        }
-        closeModal('editChatModal');
-        clearSelectedMessages();
-        renderChatMessages();
-      }
-    }
-
-    /* Scroll Tracking and Bottom Button Controller */
-    function handleChatScroll(box) {
-      const scrollBtn = document.getElementById('scrollToBottomBtn');
-      if (!scrollBtn) return;
-      
-      if (chatMessagesCache.length === 0 || box.scrollHeight <= box.clientHeight) {
-        scrollBtn.style.display = 'none';
-        return;
-      }
-
-      const distFromBottom = box.scrollHeight - box.scrollTop - box.clientHeight;
-      if (distFromBottom > 100) {
-        scrollBtn.style.display = 'flex';
-      } else {
-        scrollBtn.style.display = 'none';
-      }
-    }
-
-    function scrollToBottom(force = false) {
-      const box = document.getElementById('chatMessagesContainer');
-      if (box) {
-        box.scrollTop = box.scrollHeight;
-        const scrollBtn = document.getElementById('scrollToBottomBtn');
-        if (scrollBtn) scrollBtn.style.display = 'none';
-      }
-    }
-
-    function renderChatMessages() {
-      const container = document.getElementById('chatMessagesContainer');
-      container.innerHTML = '';
-
-      if (chatMessagesCache.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:30px; font-size:12px; color:var(--text-muted);">No messages yet. Say hello to your classmates!</div>`;
-        handleChatScroll(container);
-        return;
-      }
-
-      let lastDateHeader = '';
-
-      chatMessagesCache.forEach(msg => {
-        const msgTime = msg.timestamp || Date.now();
-        const dateHeader = formatMessageDateHeader(msgTime);
-
-        if (dateHeader !== lastDateHeader) {
-          const dateDiv = document.createElement('div');
-          dateDiv.className = 'chat-date-divider';
-          dateDiv.innerText = dateHeader;
-          container.appendChild(dateDiv);
-          lastDateHeader = dateHeader;
-        }
-
-        const isSent = msg.userId === userId;
-        const isSelected = selectedMsgIds.has(msg.id);
-
-        const row = document.createElement('div');
-        row.className = `chat-msg-row ${isSent ? 'sent' : 'received'} ${isSelected ? 'selected' : ''}`;
-        row.dataset.msgId = msg.id;
-
-        // Long press & touch events
-        row.onmousedown = () => handleMsgTouchStart(msg.id);
-        row.onmouseup = () => handleMsgTouchEnd();
-        row.ontouchstart = () => handleMsgTouchStart(msg.id);
-        row.ontouchend = () => handleMsgTouchEnd();
-        row.onclick = () => handleMsgClick(msg.id);
-
-        const firstLetter = (msg.userName || 'U').trim().charAt(0).toUpperCase();
-        const avatarHtml = `<div class="chat-avatar">${firstLetter}</div>`;
-
-        let seenIconsHtml = '';
-        if (msg.seenBy && msg.seenBy.length > 0) {
-          seenIconsHtml = `<div class="seen-avatars-row">` + msg.seenBy.map(u => {
-            const letter = (u.userName || 'U').trim().charAt(0).toUpperCase();
-            return `<div class="seen-avatar-mini" title="Seen by ${escapeHtml(u.userName)}">${letter}</div>`;
-          }).join('') + `</div>`;
-        }
-
-        const bubbleHtml = `
-          <div class="chat-bubble ${isSent ? 'sent' : 'received'}">
-            <span class="chat-sender-title">${isSent ? 'You' : escapeHtml(msg.userName)}</span>
-            <div class="chat-text-content">${escapeHtml(msg.text)}</div>
-            <div class="chat-footer-row">
-              ${msg.edited ? '<span style="font-size:8.5px; opacity:0.8;">(edited)</span>' : ''}
-              <span>${msg.time}</span>
-              ${isSent ? `<span>&#10003;&#10003;</span>` : ''}
+    <div class="container">
+        
+        <!-- ADMIN PANEL -->
+        <div id="admin-panel">
+            <div class="admin-header">
+                <h2>Admin Dashboard</h2>
+                <button class="logout-btn" onclick="logoutAdmin()">Logout</button>
             </div>
-            ${seenIconsHtml}
-          </div>
-        `;
+            
+            <div class="admin-grid">
+                <!-- Add Subject & Notice -->
+                <div>
+                    <div class="form-group">
+                        <label>Update Notice Board</label>
+                        <input type="text" id="new-notice" placeholder="Enter urgent notice here...">
+                        <button class="btn-submit" style="margin-top: 10px;" onclick="updateNotice()">Update Notice</button>
+                    </div>
+                    <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+                    <div class="form-group">
+                        <label>Add New Subject</label>
+                        <input type="text" id="new-subject" placeholder="e.g. Accountancy, Finance...">
+                        <button class="btn-submit" style="margin-top: 10px; background: var(--secondary);" onclick="addSubject()">Add Subject</button>
+                    </div>
+                </div>
 
-        if (isSent) {
-          row.innerHTML = bubbleHtml + avatarHtml;
-        } else {
-          row.innerHTML = avatarHtml + bubbleHtml;
+                <!-- Add Note -->
+                <div>
+                    <div class="form-group">
+                        <label>Select Subject</label>
+                        <select id="subject-select">
+                            <!-- Dynamic Subjects will load here -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Note Title / Topic</label>
+                        <input type="text" id="note-title" placeholder="e.g. Chapter 1 Summary">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes Content</label>
+                        <textarea id="note-text" rows="5" placeholder="Write or paste your notes here..."></textarea>
+                    </div>
+                    <button class="btn-submit" onclick="addNote()">Upload Note</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- USER VIEW -->
+        <div class="controls">
+            <input type="text" id="search-bar" class="search-box" placeholder="Search notes by keyword or title..." onkeyup="renderNotes()">
+            
+            <div class="filters" id="subject-filters">
+                <button class="filter-btn active" onclick="setFilter('All')">All Subjects</button>
+                <!-- Dynamic Filters will load here -->
+            </div>
+        </div>
+
+        <div class="notes-grid" id="notes-display">
+            <!-- Notes will render here -->
+        </div>
+
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeLoginModal()">&times;</span>
+            <h3>Admin Authentication</h3>
+            <div class="form-group">
+                <label>Email Address</label>
+                <input type="email" id="login-email" placeholder="Enter admin email">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="Enter 5-digit PIN">
+            </div>
+            <button class="btn-submit" onclick="verifyLogin()">Login</button>
+        </div>
+    </div>
+
+    <script>
+        // Database simulation (Replace with Firebase for true realtime sync across devices)
+        let dbData = JSON.parse(localStorage.getItem('commerceNotesDB')) || {
+            notice: "Welcome to the official portal for HS 1st Year Commerce.",
+            subjects: ["Accountancy", "Business Studies", "English", "Assamese"],
+            notes: []
+        };
+        
+        let currentFilter = 'All';
+
+        // Initialization
+        window.onload = function() {
+            document.getElementById('notice-text').innerText = dbData.notice;
+            renderSubjects();
+            renderNotes();
+            
+            // Keep admin logged in if session exists
+            if(sessionStorage.getItem('isAdmin') === 'true') {
+                showAdminPanel();
+            }
+        };
+
+        // Save to LocalStorage (Preparation for Firebase)
+        function saveData() {
+            localStorage.setItem('commerceNotesDB', JSON.stringify(dbData));
+            // When connecting Firebase, this is where you'll do: firebase.database().ref('portal').set(dbData);
         }
 
-        container.appendChild(row);
-      });
-    }
+        /* --- AUTHENTICATION --- */
+        function openLoginModal() { document.getElementById('login-modal').style.display = 'flex'; }
+        function closeLoginModal() { document.getElementById('login-modal').style.display = 'none'; }
+        
+        function verifyLogin() {
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
 
-    /* Text to Speech Engine */
-    function speakClassAnnouncement(isManual = false) {
-      const liveStatusEl = document.getElementById('liveClassStatus');
-      let statusCommentary = liveStatusEl ? (liveStatusEl.innerText || liveStatusEl.textContent).trim() : "";
-      const rawText = `Hi ${currentUserName}, ${statusCommentary}`;
+            if(email === "pauldebojit629@gmail.com" && pass === "94016") {
+                sessionStorage.setItem('isAdmin', 'true');
+                closeLoginModal();
+                showAdminPanel();
+                alert("Welcome Admin!");
+                document.getElementById('login-email').value = "";
+                document.getElementById('login-password').value = "";
+            } else {
+                alert("Invalid Email or Password!");
+            }
+        }
 
-      if (window.AppInventor) {
-        window.AppInventor.setWebViewString(rawText);
-        return;
-      }
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(rawText);
-        utterance.lang = 'en-US';
-        utterance.rate = 0.85;
-        utterance.pitch = 0.75;
-        window.speechSynthesis.speak(utterance);
-      }
-    }
+        function showAdminPanel() {
+            document.getElementById('admin-panel').style.display = 'block';
+            document.getElementById('auth-btn').style.display = 'none';
+        }
 
-    /* Timetable Rendering */
-    function renderFullRoutine() {
-      const container = document.getElementById('fullWeekContainer');
-      if (!container) return;
-      container.innerHTML = '';
-      const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-      days.forEach(day => {
-        const list = ROUTINE_DATA[day] || [];
-        const card = document.createElement('div');
-        card.className = 'today-card';
-        let tagsHtml = list.map(p => `
-          <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid rgba(0,0,0,0.06); font-size:15px;">
-            <span style="font-weight:700;">${p.time}</span>
-            <strong style="color:var(--primary-accent); font-weight:900;">${escapeHtml(p.sub)}</strong>
-          </div>
-        `).join('');
-        card.innerHTML = `<h3 style="color:var(--primary-accent); font-size:17px; font-weight:900; margin-bottom:10px;">${day}</h3><div>${tagsHtml}</div>`;
-        container.appendChild(card);
-      });
-    }
+        function logoutAdmin() {
+            sessionStorage.removeItem('isAdmin');
+            document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('auth-btn').style.display = 'block';
+        }
 
-    /* Page Navigation */
-    function switchNavTab(pageId, btnEl) {
-      document.querySelectorAll('.nav-tab-item').forEach(b => b.classList.remove('active'));
-      if (btnEl) btnEl.classList.add('active');
-      showPage(pageId);
-    }
+        /* --- ADMIN FUNCTIONS --- */
+        function updateNotice() {
+            const newNotice = document.getElementById('new-notice').value;
+            if(!newNotice) return alert("Notice cannot be empty!");
+            dbData.notice = newNotice;
+            document.getElementById('notice-text').innerText = newNotice;
+            document.getElementById('new-notice').value = "";
+            saveData();
+            alert("Notice updated successfully!");
+        }
 
-    function showPage(pageId) {
-      document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-      const target = document.getElementById(pageId);
-      if (target) target.classList.add('active');
-      if (pageId === 'chatPage') {
-        renderChatMessages();
-        scrollToBottom();
-      }
-    }
+        function addSubject() {
+            const newSubject = document.getElementById('new-subject').value.trim();
+            if(!newSubject) return alert("Enter a subject name!");
+            if(dbData.subjects.includes(newSubject)) return alert("Subject already exists!");
+            
+            dbData.subjects.push(newSubject);
+            document.getElementById('new-subject').value = "";
+            saveData();
+            renderSubjects();
+            alert("Subject added successfully!");
+        }
 
-    /* Admin Password: Dp@ / 94016@ */
-    function openAdminGate() { openModal('adminLoginModal'); }
-    function verifyAdminLogin() {
-      const id = document.getElementById('adminId').value;
-      const pass = document.getElementById('adminPass').value;
-      if (id === 'Dp@' && pass === '94016@') {
-        closeModal('adminLoginModal');
-        document.getElementById('adminId').value = '';
-        document.getElementById('adminPass').value = '';
-        populatePeriodSelector();
-        renderAdminMultiControls();
-        showPage('adminPage');
-      } else {
-        alert("Access Denied: Invalid Admin ID or Password!");
-      }
-    }
+        function addNote() {
+            const subject = document.getElementById('subject-select').value;
+            const title = document.getElementById('note-title').value;
+            const text = document.getElementById('note-text').value;
 
-    function openModal(id) { document.getElementById(id).style.display = 'flex'; }
-    function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-    function escapeHtml(str) {
-      return String(str||'').replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
-    }
+            if(!title || !text) return alert("Please fill both Title and Content!");
 
-    function initApp() {
-      updateLiveDashboard();
-      setInterval(updateLiveDashboard, 1000);
-      renderFullRoutine();
-      populatePeriodSelector();
-    }
-    window.addEventListener('DOMContentLoaded', initApp);
-  </script>
+            const newNote = {
+                id: Date.now(),
+                subject: subject,
+                title: title,
+                text: text,
+                date: new Date().toLocaleDateString('en-IN')
+            };
+
+            dbData.notes.unshift(newNote); // Add to beginning
+            document.getElementById('note-title').value = "";
+            document.getElementById('note-text').value = "";
+            saveData();
+            renderNotes();
+            alert("Note uploaded successfully!");
+        }
+
+        /* --- USER DISPLAY FUNCTIONS --- */
+        function renderSubjects() {
+            // Update Admin Select Dropdown
+            const select = document.getElementById('subject-select');
+            select.innerHTML = "";
+            
+            // Update User Filters
+            const filters = document.getElementById('subject-filters');
+            filters.innerHTML = `<button class="filter-btn ${currentFilter === 'All' ? 'active' : ''}" onclick="setFilter('All')">All Subjects</button>`;
+
+            dbData.subjects.forEach(sub => {
+                // Add to Select
+                const option = document.createElement('option');
+                option.value = sub;
+                option.innerText = sub;
+                select.appendChild(option);
+
+                // Add to Filters
+                const btn = document.createElement('button');
+                btn.className = `filter-btn ${currentFilter === sub ? 'active' : ''}`;
+                btn.innerText = sub;
+                btn.onclick = () => setFilter(sub);
+                filters.appendChild(btn);
+            });
+        }
+
+        function setFilter(subject) {
+            currentFilter = subject;
+            renderSubjects(); // Update active button colors
+            renderNotes();
+        }
+
+        function renderNotes() {
+            const container = document.getElementById('notes-display');
+            const searchQuery = document.getElementById('search-bar').value.toLowerCase();
+            container.innerHTML = "";
+
+            const filteredNotes = dbData.notes.filter(note => {
+                const matchSubject = (currentFilter === 'All') || (note.subject === currentFilter);
+                const matchSearch = note.title.toLowerCase().includes(searchQuery) || note.text.toLowerCase().includes(searchQuery);
+                return matchSubject && matchSearch;
+            });
+
+            if(filteredNotes.length === 0) {
+                container.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 40px;">No notes found.</p>`;
+                return;
+            }
+
+            filteredNotes.forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'note-card';
+                div.innerHTML = `
+                    <span class="note-subject">${note.subject}</span>
+                    <h3 class="note-title">${note.title}</h3>
+                    <div class="note-text">${note.text}</div>
+                    <span class="note-date">Added on: ${note.date}</span>
+                `;
+                container.appendChild(div);
+            });
+        }
+    </script>
 </body>
 </html>
 
