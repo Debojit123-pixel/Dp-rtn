@@ -10,9 +10,6 @@
     <!-- Quill.js Rich Text Editor CSS -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
 
-    <!-- html2pdf for PDF Generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
     <style>
         /* Base Styles */
         :root {
@@ -85,7 +82,6 @@
         .btn-pdf-download { background: #0077b6; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .btn-pdf-download:hover { background: #023e8a; }
 
-        /* Print Area Formatting */
         #printArea { background: #ffffff !important; padding: 15px; } 
         
         /* Watermark */
@@ -94,9 +90,8 @@
         #view-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 15px 0 5px 0; position: relative; z-index: 1; }
         #view-meta { font-size: 0.85rem; color: var(--text-light); margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
         
-        /* FIX FOR OVERLAPPING TEXT: Clean line-height and natural page breaks */
         #view-text { padding: 10px 0; font-size: 1.05rem; line-height: 1.8; color: #374151; word-wrap: break-word; position: relative; z-index: 1; }
-        #view-text p { margin-bottom: 12px; }
+        #view-text p { margin-bottom: 10px; }
         #view-text ul, #view-text ol { padding-left: 25px; margin-bottom: 15px; }
 
         /* Login Modal */
@@ -104,6 +99,33 @@
         .modal-content { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; }
         .modal-content h3 { margin-bottom: 20px; text-align: center; color: var(--primary); }
         .close-modal { float: right; cursor: pointer; font-size: 1.5rem; font-weight: bold; color: #aaa; margin-top: -10px; }
+
+        /* ================================================== */
+        /* PDF PRINT FIX: NO MORE MASSIVE BLANK SPACES        */
+        /* ================================================== */
+        @media print {
+            body { background: white !important; }
+            header, .notice-bar, .container, .btn-pdf-download, .note-view-header { display: none !important; }
+            
+            #note-view-modal { 
+                position: relative !important; 
+                display: block !important; 
+                width: 100% !important; 
+                height: auto !important; 
+                background: white !important; 
+                overflow: visible !important;
+            }
+            .note-view-container { box-shadow: none !important; margin: 0 !important; padding: 0 !important; max-width: 100% !important; border: none !important; }
+            #printArea { padding: 0 !important; overflow: visible !important; }
+            
+            /* THIS IS THE FIX: Allows text to naturally break to the next page without leaving gaps */
+            #view-text p, #view-text div, #view-text li { page-break-inside: auto !important; }
+            
+            /* Prevent headings (Questions) from being left alone at the bottom of a page */
+            #view-text h1, #view-text h2, #view-text h3 { page-break-after: avoid !important; page-break-inside: avoid !important; }
+            
+            .pdf-watermark { display: block !important; position: fixed !important; }
+        }
     </style>
     
     <!-- Firebase SDK -->
@@ -123,7 +145,7 @@
         <span>NOTICE</span> <marquee id="notice-text">Connecting to server...</marquee>
     </div>
 
-    <div class="container">
+    <div class="container" id="main-container">
         
         <!-- ADMIN PANEL -->
         <div id="admin-panel">
@@ -196,7 +218,7 @@
         
         <div class="note-view-container">
             
-            <button class="btn-pdf-download" id="btnPdfDownload" onclick="downloadNotePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+            <button class="btn-pdf-download" onclick="downloadNotePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
 
             <!-- Print Area for PDF -->
             <div id="printArea">
@@ -433,7 +455,6 @@
             const note = dbData.notes.find(n => n.id === id);
             if(!note) return;
             
-            // Format title for filename properly
             currentNoteTitle = note.title.replace(/[^a-zA-Z0-9 ঀ-৿]/g, "").trim().replace(/\s+/g, "_"); 
             if(currentNoteTitle === "") currentNoteTitle = "Study_Notes";
 
@@ -444,54 +465,25 @@
             document.getElementById('view-text').innerHTML = note.text || "";
             
             document.getElementById('note-view-modal').style.display = 'block';
+            
+            // Hide main container to prevent print bugs
+            document.getElementById('main-container').style.display = 'none';
         }
 
         function closeNoteView() {
             document.getElementById('note-view-modal').style.display = 'none';
+            // Show main container again
+            document.getElementById('main-container').style.display = 'block';
         }
 
-        /* --- DIRECT HIGH QUALITY BROWSER DOWNLOAD (Overlapping Fix) --- */
-        function toast(msg, ms) {
-            let t = document.getElementById('pdfToast');
-            if (!t) {
-                t = document.createElement('div');
-                t.id = 'pdfToast';
-                t.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;' +
-                    'padding:10px 18px;border-radius:20px;font-size:13px;z-index:1000001;display:none;max-width:85%;text-align:center;';
-                document.body.appendChild(t);
-            }
-            t.textContent = msg;
-            t.style.display = 'block';
-            clearTimeout(t._h);
-            if (ms) t._h = setTimeout(function () { t.style.display = 'none'; }, ms);
-        }
-
+        /* --- NATIVE BROWSER PDF DOWNLOAD LOGIC --- */
         window.downloadNotePDF = function () {
-            let el = document.getElementById('printArea');
-            let name = currentNoteTitle ? currentNoteTitle + '.pdf' : 'Notes.pdf';
+            const originalTitle = document.title;
+            document.title = currentNoteTitle ? currentNoteTitle : 'Study_Notes';
             
-            toast('Generating High-Quality PDF... Please wait.');
-            document.querySelector('.pdf-watermark').style.display = 'block';
-
-            // High Quality options. No manual CSS page-break avoids overlapping text.
-            let opt = {
-                margin:       15, 
-                filename:     name,
-                image:        { type: 'jpeg', quality: 1 }, 
-                html2canvas:  { scale: 2, useCORS: true }, 
-                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['css', 'legacy'] } // Lets the PDF engine naturally wrap the pages!
-            };
-
-            // Direct Save to Browser
-            html2pdf().set(opt).from(el).save().then(function() {
-                document.querySelector('.pdf-watermark').style.display = 'none';
-                toast('PDF Downloaded Successfully!', 3000);
-            }).catch(function(err) {
-                console.error(err);
-                document.querySelector('.pdf-watermark').style.display = 'none';
-                toast('Error generating PDF.', 3000);
-            });
+            window.print();
+            
+            setTimeout(() => { document.title = originalTitle; }, 2000);
         };
 
         /* --- USER DISPLAY FUNCTIONS --- */
