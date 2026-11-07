@@ -64,8 +64,7 @@
         .note-view-container { max-width: 900px; margin: 20px auto; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         #view-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 15px 0 5px 0; }
         #view-meta { font-size: 0.85rem; color: var(--text-light); margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        
-        #view-text { padding: 10px 0; } /* Text wrapper styling handled by JS magic now */
+        #view-text { padding: 10px 0; } 
 
         /* Login Modal */
         #login-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
@@ -140,7 +139,7 @@
             </div>
         </div>
 
-        <!-- USER VIEW (Search & Notes List) -->
+        <!-- USER VIEW -->
         <div class="controls">
             <input type="text" id="search-bar" class="search-box" placeholder="Search notes by keyword or title..." onkeyup="renderNotes()">
             <div class="filters" id="subject-filters">
@@ -163,7 +162,6 @@
             <div id="view-meta">
                 <span id="view-date"></span>
             </div>
-            <!-- Magic formatted text will appear here -->
             <div id="view-text"></div>
         </div>
     </div>
@@ -180,9 +178,17 @@
     </div>
 
     <script>
-        // ==========================================
-        // ফায়ারবেস কনফিগারেশন - (Tomar asol code)
-        // ==========================================
+        // Check if Firebase loaded properly
+        window.onload = function() {
+            if(typeof firebase === 'undefined') {
+                document.getElementById('notice-text').innerText = "Firebase load failed! Check Internet.";
+                alert("Internet Connection Check koro. Firebase server load hote pareni.");
+                return;
+            }
+            if(sessionStorage.getItem('isAdmin') === 'true') showAdminPanel();
+        };
+
+        // Firebase Config
         var firebaseConfig = {
             apiKey: "AIzaSyDLEKhx5cGKBzdIpvOnBRrvHVSN23elvWs",
             authDomain: "notes-2148c.firebaseapp.com",
@@ -199,7 +205,6 @@
 
         let dbData = { notice: "Welcome to HS 1st Year Commerce", subjects: [], notes: [] };
         let currentFilter = 'All';
-        let isAdminLoggedIn = false;
 
         db.ref('studyPortal').on('value', (snapshot) => {
             const data = snapshot.val();
@@ -212,18 +217,22 @@
             document.getElementById('notice-text').innerText = dbData.notice || "Welcome";
             renderSubjects();
             renderNotes();
+        }, (error) => {
+            document.getElementById('loading-text').style.display = 'none';
+            document.getElementById('notice-text').innerText = "Database connection blocked!";
+            alert("Firebase Error: " + error.message + "\n\nTomar Firebase Database Rules ekhono 'read: true' ebong 'write: true' kora hoyni! Please age rules thik koro.");
         });
 
         function saveData() { db.ref('studyPortal').set(dbData); }
-        window.onload = function() { if(sessionStorage.getItem('isAdmin') === 'true') showAdminPanel(); };
 
         /* --- AUTHENTICATION --- */
         function openLoginModal() { document.getElementById('login-modal').style.display = 'flex'; }
         function closeLoginModal() { document.getElementById('login-modal').style.display = 'none'; }
         
         function verifyLogin() {
-            const email = document.getElementById('login-email').value;
-            const pass = document.getElementById('login-password').value;
+            const email = document.getElementById('login-email').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+            
             if(email === "pauldebojit629@gmail.com" && pass === "94016") {
                 sessionStorage.setItem('isAdmin', 'true');
                 closeLoginModal();
@@ -234,14 +243,12 @@
         }
 
         function showAdminPanel() {
-            isAdminLoggedIn = true;
             document.getElementById('admin-panel').style.display = 'block';
             document.getElementById('auth-btn').style.display = 'none';
             document.getElementById('main-body').classList.add('admin-mode');
         }
 
         function logoutAdmin() {
-            isAdminLoggedIn = false;
             sessionStorage.removeItem('isAdmin');
             document.getElementById('admin-panel').style.display = 'none';
             document.getElementById('auth-btn').style.display = 'block';
@@ -250,7 +257,7 @@
 
         /* --- ADMIN FUNCTIONS --- */
         function updateNotice() {
-            const newNotice = document.getElementById('new-notice').value;
+            const newNotice = document.getElementById('new-notice').value.trim();
             if(!newNotice) return alert("Notice cannot be empty!");
             dbData.notice = newNotice;
             document.getElementById('new-notice').value = "";
@@ -281,7 +288,7 @@
 
         function addNote() {
             const subject = document.getElementById('subject-select').value;
-            const title = document.getElementById('note-title').value;
+            const title = document.getElementById('note-title').value.trim();
             const text = document.getElementById('note-text').value;
             if(!title || !text || !subject) return alert("Please fill all details!");
 
@@ -303,50 +310,54 @@
             }
         }
 
-        /* --- SMART FORMATTING LOGIC FOR FULL SCREEN VIEW --- */
+        /* --- NEW IDEA: SUPER SMART FORMATTING LOGIC --- */
         function openNote(id) {
-            const note = dbData.notes.find(n => n.id === id);
-            if(!note) return;
-            
-            document.getElementById('view-subject').innerText = note.subject;
-            document.getElementById('view-title').innerText = note.title;
-            document.getElementById('view-date').innerText = "Added on: " + note.date;
-            
-            // MAGIC LOGIC START
-            let lines = note.text.split('\n');
-            let formattedHtml = '';
-            
-            lines.forEach(line => {
-                let trimmed = line.trim();
+            try {
+                const note = dbData.notes.find(n => n.id === id);
+                if(!note) return;
                 
-                if (trimmed === '') {
-                    // Empty lines get some extra visual space
-                    formattedHtml += `<div style="height: 10px;"></div>`;
-                } else {
-                    // Make text safe for HTML (prevent errors if user typed < or >)
-                    let safeText = trimmed.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                    
-                    // Detect if line is a Question or Answer
-                    let isQuestion = /^(q|question|প্রঃ|প্রশ্ন)[-.\s:]/i.test(safeText) || /^\d+[-.\)]/.test(safeText);
-                    let isAnswer = /^(ans|answer|উঃ|উত্তর|sol|solution)[-.\s:]/i.test(safeText);
-                    
-                    if (isQuestion) {
-                        // Highlight Question & Add Top Spacing
-                        formattedHtml += `<div style="margin-top: 25px; font-weight: 700; color: #1d4ed8; font-size: 1.05rem;">${safeText}</div>`;
-                    } else if (isAnswer) {
-                        // Highlight Answer
-                        formattedHtml += `<div style="margin-top: 10px; font-weight: 600; color: #059669;">${safeText}</div>`;
+                document.getElementById('view-subject').innerText = note.subject || "";
+                document.getElementById('view-title').innerText = note.title || "";
+                document.getElementById('view-date').innerText = "Added on: " + (note.date || "");
+                
+                let textToFormat = note.text || "No content found.";
+                let lines = textToFormat.split('\n');
+                let formattedHtml = '';
+                
+                lines.forEach(line => {
+                    let trimmed = line.trim();
+                    if (trimmed === '') {
+                        // Empty lines for spacing
+                        formattedHtml += `<div style="height: 12px;"></div>`;
                     } else {
-                        // Normal text line
-                        formattedHtml += `<div style="margin-top: 5px; color: #374151; line-height: 1.7; white-space: pre-wrap;">${safeText}</div>`;
+                        // Safe text for HTML
+                        let safeText = trimmed.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                        let lowerText = safeText.toLowerCase();
+                        
+                        // Check if Answer (Ans, উত্তর, উঃ)
+                        let isAnswer = lowerText.startsWith('ans') || lowerText.startsWith('answer') || safeText.startsWith('উঃ') || safeText.startsWith('উত্তর') || lowerText.startsWith('sol');
+                        
+                        // NEW IDEA: Check if line CONTAINS "প্রশ্ন", "প্রঃ", "Question" or ends with "?" or starts with a Number
+                        let isQuestion = safeText.includes('প্রশ্ন') || safeText.includes('প্রঃ') || lowerText.includes('question') || safeText.endsWith('?') || /^[0-9১-৯]+[-.)\s]/.test(safeText) || lowerText.startsWith('q.') || lowerText.startsWith('q:');
+                        
+                        if (isQuestion && !isAnswer) {
+                            // Highlights "অতি চমু প্রশ্ন" or any question and adds a bottom border
+                            formattedHtml += `<div style="margin-top: 24px; padding-bottom: 4px; font-weight: 700; color: #1d4ed8; font-size: 1.05rem; border-bottom: 1px dashed #d1d5db;">${safeText}</div>`;
+                        } else if (isAnswer) {
+                            // Highlights Answer
+                            formattedHtml += `<div style="margin-top: 10px; font-weight: 600; color: #059669;">${safeText}</div>`;
+                        } else {
+                            // Normal Text
+                            formattedHtml += `<div style="margin-top: 5px; color: #374151; line-height: 1.7; white-space: pre-wrap;">${safeText}</div>`;
+                        }
                     }
-                }
-            });
-            
-            document.getElementById('view-text').innerHTML = formattedHtml;
-            // MAGIC LOGIC END
-
-            document.getElementById('note-view-modal').style.display = 'block';
+                });
+                
+                document.getElementById('view-text').innerHTML = formattedHtml;
+                document.getElementById('note-view-modal').style.display = 'block';
+            } catch (err) {
+                alert("Opps! Note open korte giye ekti error hoyeche: " + err.message);
+            }
         }
 
         function closeNoteView() {
@@ -383,7 +394,9 @@
 
             const filteredNotes = dbData.notes.filter(note => {
                 const matchSubject = (currentFilter === 'All') || (note.subject === currentFilter);
-                const matchSearch = note.title.toLowerCase().includes(searchQuery) || note.text.toLowerCase().includes(searchQuery);
+                const titleStr = (note.title || "").toLowerCase();
+                const textStr = (note.text || "").toLowerCase();
+                const matchSearch = titleStr.includes(searchQuery) || textStr.includes(searchQuery);
                 return matchSubject && matchSearch;
             });
 
