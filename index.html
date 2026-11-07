@@ -79,7 +79,6 @@
 </head>
 <body id="main-body">
 
-    <!-- Header -->
     <header>
         <h1>📚 HS 1st Year Commerce</h1>
         <button class="login-btn" onclick="openLoginModal()" id="auth-btn">Admin Login</button>
@@ -89,8 +88,8 @@
         <span>NOTICE</span> <marquee id="notice-text">Connecting to server...</marquee>
     </div>
 
-    <!-- Main Container -->
     <div class="container">
+        
         <!-- ADMIN PANEL -->
         <div id="admin-panel">
             <div class="admin-header">
@@ -188,7 +187,7 @@
             if(sessionStorage.getItem('isAdmin') === 'true') showAdminPanel();
         };
 
-        // Firebase Config
+        // Firebase Config (Your Configuration)
         var firebaseConfig = {
             apiKey: "AIzaSyDLEKhx5cGKBzdIpvOnBRrvHVSN23elvWs",
             authDomain: "notes-2148c.firebaseapp.com",
@@ -220,7 +219,7 @@
         }, (error) => {
             document.getElementById('loading-text').style.display = 'none';
             document.getElementById('notice-text').innerText = "Database connection blocked!";
-            alert("Firebase Error: " + error.message + "\n\nTomar Firebase Database Rules ekhono 'read: true' ebong 'write: true' kora hoyni! Please age rules thik koro.");
+            alert("Firebase Error: " + error.message);
         });
 
         function saveData() { db.ref('studyPortal').set(dbData); }
@@ -310,7 +309,7 @@
             }
         }
 
-        /* --- NEW IDEA: SUPER SMART FORMATTING LOGIC --- */
+        /* --- PRO LEVEL FORMATTING LOGIC --- */
         function openNote(id) {
             try {
                 const note = dbData.notes.find(n => n.id === id);
@@ -327,28 +326,31 @@
                 lines.forEach(line => {
                     let trimmed = line.trim();
                     if (trimmed === '') {
-                        // Empty lines for spacing
-                        formattedHtml += `<div style="height: 12px;"></div>`;
+                        // Empty lines for natural spacing
+                        formattedHtml += `<div style="height: 10px;"></div>`;
                     } else {
-                        // Safe text for HTML
                         let safeText = trimmed.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                         let lowerText = safeText.toLowerCase();
                         
-                        // Check if Answer (Ans, উত্তর, উঃ)
-                        let isAnswer = lowerText.startsWith('ans') || lowerText.startsWith('answer') || safeText.startsWith('উঃ') || safeText.startsWith('উত্তর') || lowerText.startsWith('sol');
+                        // 1. CAPTION DETECTOR (Headings) - Checks for common caption words and keeps length short
+                        let isCaption = /(অতি চমু প্রশ্ন|চমু প্রশ্ন|দীর্ঘ প্রশ্ন|ৰচনাধৰ্মী|বহুবিকল্পী|মান|marks|section|part|বিভাগ|অধ্যায়|chapter|question and answer|proshno)/i.test(lowerText) && safeText.length < 80;
                         
-                        // NEW IDEA: Check if line CONTAINS "প্রশ্ন", "প্রঃ", "Question" or ends with "?" or starts with a Number
-                        let isQuestion = safeText.includes('প্রশ্ন') || safeText.includes('প্রঃ') || lowerText.includes('question') || safeText.endsWith('?') || /^[0-9১-৯]+[-.)\s]/.test(safeText) || lowerText.startsWith('q.') || lowerText.startsWith('q:');
+                        // 2. ANSWER DETECTOR - Matches 'Ans', 'Answer', 'উঃ', 'উত্তর'
+                        let isAnswer = /^(ans|answer|উঃ|উত্তর|sol|solution|উ\.|ans\.)/i.test(safeText);
                         
-                        if (isQuestion && !isAnswer) {
-                            // Highlights "অতি চমু প্রশ্ন" or any question and adds a bottom border
-                            formattedHtml += `<div style="margin-top: 24px; padding-bottom: 4px; font-weight: 700; color: #1d4ed8; font-size: 1.05rem; border-bottom: 1px dashed #d1d5db;">${safeText}</div>`;
+                        // 3. QUESTION DETECTOR - Matches 'Q.', 'প্রঃ', numbers '1.', '১.', or ends with '?'
+                        let isQuestion = /^(q|question|প্রঃ|প্রশ্ন|প্র\.|q\.)/i.test(safeText) || /^[0-9০১২৩৪৫৬৭৮৯]+[\s.)\-]/i.test(safeText) || safeText.endsWith('?');
+
+                        // APPLY STYLES (Professional Left Borders instead of messy dashed lines)
+                        if (isCaption) {
+                            formattedHtml += `<div style="margin: 20px 0 10px 0; padding: 8px 10px; background: #eef2ff; color: #3730a3; font-weight: 700; text-align: center; border-radius: 6px; border: 1px solid #c7d2fe; font-size: 1.1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">${safeText}</div>`;
                         } else if (isAnswer) {
-                            // Highlights Answer
-                            formattedHtml += `<div style="margin-top: 10px; font-weight: 600; color: #059669;">${safeText}</div>`;
+                            formattedHtml += `<div style="margin-top: 10px; font-weight: 600; color: #059669; padding-left: 12px; border-left: 4px solid #10b981;">${safeText}</div>`;
+                        } else if (isQuestion) {
+                            formattedHtml += `<div style="margin-top: 20px; font-weight: 700; color: #b91c1c; padding-left: 12px; border-left: 4px solid #ef4444;">${safeText}</div>`;
                         } else {
-                            // Normal Text
-                            formattedHtml += `<div style="margin-top: 5px; color: #374151; line-height: 1.7; white-space: pre-wrap;">${safeText}</div>`;
+                            // Normal Text continuation
+                            formattedHtml += `<div style="margin-top: 6px; color: #374151; line-height: 1.7; white-space: pre-wrap; padding-left: 16px;">${safeText}</div>`;
                         }
                     }
                 });
@@ -356,7 +358,7 @@
                 document.getElementById('view-text').innerHTML = formattedHtml;
                 document.getElementById('note-view-modal').style.display = 'block';
             } catch (err) {
-                alert("Opps! Note open korte giye ekti error hoyeche: " + err.message);
+                alert("Error opening note: " + err.message);
             }
         }
 
