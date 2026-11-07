@@ -93,11 +93,11 @@
         #view-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 15px 0 5px 0; position: relative; z-index: 1; }
         #view-meta { font-size: 0.85rem; color: var(--text-light); margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
         
-        /* Rendered HTML Styling inside View - Preventing Page Breaks inside elements */
+        /* Rendered HTML Styling inside View (Prevents Breaking correctly) */
         #view-text { padding: 10px 0; font-size: 1.05rem; line-height: 1.8; color: #374151; word-wrap: break-word; position: relative; z-index: 1; }
-        #view-text p, #view-text h1, #view-text h2, #view-text h3, #view-text div { page-break-inside: avoid !important; margin-bottom: 10px; }
-        #view-text ul, #view-text ol { padding-left: 25px; margin-bottom: 15px; page-break-inside: avoid !important; }
-        #view-text li { page-break-inside: avoid !important; }
+        #view-text > * { page-break-inside: avoid !important; }
+        #view-text p { margin-bottom: 10px; }
+        #view-text ul, #view-text ol { padding-left: 25px; margin-bottom: 15px; }
 
         /* Login Modal */
         #login-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
@@ -198,7 +198,7 @@
         
         <div class="note-view-container">
             
-            <!-- Download PDF Button (Moved to Top, Name changed to "Download PDF") -->
+            <!-- Download PDF Button (Name changed to "Download PDF") -->
             <button class="btn-pdf-download" id="btnPdfDownload" onclick="downloadNotePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
 
             <!-- Print Area for PDF -->
@@ -516,39 +516,61 @@
 
             document.querySelector('.pdf-watermark').style.display = 'block';
 
+            let blob;
             try {
-                // ADDED 'avoid-all' TO STOP TEXT FROM CUTTING OFF IN THE MIDDLE
+                // FIXED: Removed avoid-all from JS options to prevent crashing. CSS handles it now.
                 let opt = {
                     margin:       [10, 10, 10, 10],
                     filename:     name,
                     image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true, letterRendering: true },
-                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                    pagebreak:    { mode: ['avoid-all', 'css', 'legacy'] } 
+                    html2canvas:  { scale: 2, useCORS: true },
+                    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
-
-                let blob = await html2pdf().set(opt).from(el).outputPdf('blob');
-                document.querySelector('.pdf-watermark').style.display = 'none';
-
-                toast('Uploading to Cloud Server...');
-                let fd = new FormData();
-                fd.append('file', blob, name);
-                
-                let res = await fetch('https://tmpfiles.org/api/v1/upload', { method: 'POST', body: fd });
-                let json = await res.json();
-                let dlUrl = json && json.data && json.data.url;
-
-                if (!dlUrl) throw new Error('Upload failed');
-                dlUrl = dlUrl.replace('http://', 'https://').replace('tmpfiles.org/', 'tmpfiles.org/dl/');
-                
-                hideToast();
-                showLinkSheet(dlUrl, name);
-
-            } catch (err) {
+                blob = await html2pdf().set(opt).from(el).outputPdf('blob');
+            } catch(err) {
                 console.error(err);
                 document.querySelector('.pdf-watermark').style.display = 'none';
-                toast('Failed. Please check internet connection.', 4000);
+                return toast('PDF Generation Failed: ' + err.message, 4000);
             }
+
+            document.querySelector('.pdf-watermark').style.display = 'none';
+            toast('Uploading to Cloud Server...');
+
+            let dlUrl = '';
+
+            try {
+                // PRIMARY UPLOAD SERVER (Catbox - Very reliable, allows CORS)
+                let fd1 = new FormData();
+                fd1.append('reqtype', 'fileupload');
+                fd1.append('time', '12h'); // Expires in 12 hours
+                fd1.append('fileToUpload', blob, name);
+                
+                let res1 = await fetch('https://litterbox.catbox.moe/user/api.php', { method: 'POST', body: fd1 });
+                dlUrl = await res1.text();
+                
+                if(!dlUrl.startsWith('http')) throw new Error('Primary server failed');
+
+            } catch (err1) {
+                // FALLBACK UPLOAD SERVER (tmpfiles.org - Used if first one fails)
+                try {
+                    let fd2 = new FormData();
+                    fd2.append('file', blob, name);
+                    let res2 = await fetch('https://tmpfiles.org/api/v1/upload', { method: 'POST', body: fd2 });
+                    let json = await res2.json();
+                    
+                    if (json && json.data && json.data.url) {
+                        dlUrl = json.data.url.replace('http://', 'https://').replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+                    } else {
+                        throw new Error('Fallback server failed');
+                    }
+                } catch(err2) {
+                    console.error(err1, err2);
+                    return toast('Upload failed. Please check internet connection.', 4000);
+                }
+            }
+            
+            hideToast();
+            showLinkSheet(dlUrl, name);
         };
 
         /* --- USER DISPLAY FUNCTIONS --- */
