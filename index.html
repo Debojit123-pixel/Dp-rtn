@@ -223,4 +223,189 @@
         
         function verifyLogin() {
             const email = document.getElementById('login-email').value;
-            const pass = document.getElementById('login-password').
+            const pass = document.getElementById('login-password').value;
+            if(email === "pauldebojit629@gmail.com" && pass === "94016") {
+                sessionStorage.setItem('isAdmin', 'true');
+                closeLoginModal();
+                showAdminPanel();
+                alert("Welcome Admin!");
+                document.getElementById('login-email').value = ""; document.getElementById('login-password').value = "";
+            } else { alert("Invalid Email or Password!"); }
+        }
+
+        function showAdminPanel() {
+            isAdminLoggedIn = true;
+            document.getElementById('admin-panel').style.display = 'block';
+            document.getElementById('auth-btn').style.display = 'none';
+            document.getElementById('main-body').classList.add('admin-mode');
+        }
+
+        function logoutAdmin() {
+            isAdminLoggedIn = false;
+            sessionStorage.removeItem('isAdmin');
+            document.getElementById('admin-panel').style.display = 'none';
+            document.getElementById('auth-btn').style.display = 'block';
+            document.getElementById('main-body').classList.remove('admin-mode');
+        }
+
+        /* --- ADMIN FUNCTIONS --- */
+        function updateNotice() {
+            const newNotice = document.getElementById('new-notice').value;
+            if(!newNotice) return alert("Notice cannot be empty!");
+            dbData.notice = newNotice;
+            document.getElementById('new-notice').value = "";
+            saveData();
+            alert("Notice updated!");
+        }
+
+        function addSubject() {
+            const newSubject = document.getElementById('new-subject').value.trim();
+            if(!newSubject) return alert("Enter a subject name!");
+            if(dbData.subjects.includes(newSubject)) return alert("Subject already exists!");
+            dbData.subjects.push(newSubject);
+            document.getElementById('new-subject').value = "";
+            saveData();
+            alert("Subject added!");
+        }
+
+        function deleteSubject() {
+            const subjectToDelete = document.getElementById('delete-subject-select').value;
+            if(!subjectToDelete) return alert("Select a subject!");
+            if(confirm(`Are you sure you want to delete "${subjectToDelete}"?`)) {
+                dbData.subjects = dbData.subjects.filter(sub => sub !== subjectToDelete);
+                if(currentFilter === subjectToDelete) currentFilter = 'All';
+                saveData();
+                alert("Subject deleted!");
+            }
+        }
+
+        function addNote() {
+            const subject = document.getElementById('subject-select').value;
+            const title = document.getElementById('note-title').value;
+            const text = document.getElementById('note-text').value;
+            if(!title || !text || !subject) return alert("Please fill all details!");
+
+            const newNote = {
+                id: Date.now(), subject: subject, title: title, text: text,
+                date: new Date().toLocaleDateString('en-IN')
+            };
+            dbData.notes.unshift(newNote); 
+            document.getElementById('note-title').value = ""; document.getElementById('note-text').value = "";
+            saveData();
+            alert("Note uploaded globally!");
+        }
+
+        function deleteNote(id, event) {
+            event.stopPropagation();
+            if(confirm("Are you sure you want to delete this note?")) {
+                dbData.notes = dbData.notes.filter(note => note.id !== id);
+                saveData();
+            }
+        }
+
+        /* --- SMART FORMATTING LOGIC FOR FULL SCREEN VIEW --- */
+        function openNote(id) {
+            const note = dbData.notes.find(n => n.id === id);
+            if(!note) return;
+            
+            document.getElementById('view-subject').innerText = note.subject;
+            document.getElementById('view-title').innerText = note.title;
+            document.getElementById('view-date').innerText = "Added on: " + note.date;
+            
+            // MAGIC LOGIC START
+            let lines = note.text.split('\n');
+            let formattedHtml = '';
+            
+            lines.forEach(line => {
+                let trimmed = line.trim();
+                
+                if (trimmed === '') {
+                    // Empty lines get some extra visual space
+                    formattedHtml += `<div style="height: 10px;"></div>`;
+                } else {
+                    // Make text safe for HTML (prevent errors if user typed < or >)
+                    let safeText = trimmed.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    
+                    // Detect if line is a Question or Answer
+                    let isQuestion = /^(q|question|প্রঃ|প্রশ্ন)[-.\s:]/i.test(safeText) || /^\d+[-.\)]/.test(safeText);
+                    let isAnswer = /^(ans|answer|উঃ|উত্তর|sol|solution)[-.\s:]/i.test(safeText);
+                    
+                    if (isQuestion) {
+                        // Highlight Question & Add Top Spacing
+                        formattedHtml += `<div style="margin-top: 25px; font-weight: 700; color: #1d4ed8; font-size: 1.05rem;">${safeText}</div>`;
+                    } else if (isAnswer) {
+                        // Highlight Answer
+                        formattedHtml += `<div style="margin-top: 10px; font-weight: 600; color: #059669;">${safeText}</div>`;
+                    } else {
+                        // Normal text line
+                        formattedHtml += `<div style="margin-top: 5px; color: #374151; line-height: 1.7; white-space: pre-wrap;">${safeText}</div>`;
+                    }
+                }
+            });
+            
+            document.getElementById('view-text').innerHTML = formattedHtml;
+            // MAGIC LOGIC END
+
+            document.getElementById('note-view-modal').style.display = 'block';
+        }
+
+        function closeNoteView() {
+            document.getElementById('note-view-modal').style.display = 'none';
+        }
+
+        /* --- USER DISPLAY FUNCTIONS --- */
+        function renderSubjects() {
+            const addSelect = document.getElementById('subject-select');
+            const delSelect = document.getElementById('delete-subject-select');
+            const filters = document.getElementById('subject-filters');
+            
+            addSelect.innerHTML = ""; delSelect.innerHTML = "";
+            filters.innerHTML = `<button class="filter-btn ${currentFilter === 'All' ? 'active' : ''}" onclick="setFilter('All')">All Subjects</button>`;
+
+            dbData.subjects.forEach(sub => {
+                addSelect.appendChild(new Option(sub, sub));
+                delSelect.appendChild(new Option(sub, sub));
+                
+                const btn = document.createElement('button');
+                btn.className = `filter-btn ${currentFilter === sub ? 'active' : ''}`;
+                btn.innerText = sub;
+                btn.onclick = () => setFilter(sub);
+                filters.appendChild(btn);
+            });
+        }
+
+        function setFilter(subject) { currentFilter = subject; renderSubjects(); renderNotes(); }
+
+        function renderNotes() {
+            const container = document.getElementById('notes-display');
+            const searchQuery = document.getElementById('search-bar').value.toLowerCase();
+            container.innerHTML = "";
+
+            const filteredNotes = dbData.notes.filter(note => {
+                const matchSubject = (currentFilter === 'All') || (note.subject === currentFilter);
+                const matchSearch = note.title.toLowerCase().includes(searchQuery) || note.text.toLowerCase().includes(searchQuery);
+                return matchSubject && matchSearch;
+            });
+
+            if(filteredNotes.length === 0) {
+                container.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #6b7280; padding: 40px;">No notes found.</p>`;
+                return;
+            }
+
+            filteredNotes.forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'note-card';
+                div.onclick = function() { openNote(note.id); };
+                
+                div.innerHTML = `
+                    <button class="delete-note-btn" onclick="deleteNote(${note.id}, event)" title="Delete Note">🗑️</button>
+                    <span class="note-subject">${note.subject}</span>
+                    <h3 class="note-title">${note.title}</h3>
+                    <div class="note-date">${note.date}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+    </script>
+</body>
+</html>
