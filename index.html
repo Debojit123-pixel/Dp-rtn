@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HS 1st Year Commerce - Study Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- Quill.js Rich Text Editor CSS -->
     <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
+    <!-- html2pdf for PDF Generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
         /* Base Styles */
@@ -72,14 +76,25 @@
 
         /* FULL SCREEN NOTE VIEW MODAL */
         #note-view-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-color); z-index: 2000; overflow-y: auto; }
-        .note-view-header { background: var(--primary); color: white; padding: 15px 5%; display: flex; align-items: center; position: sticky; top: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .note-view-header { background: var(--primary); color: white; padding: 15px 5%; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); z-index: 2001; }
         .back-btn { background: none; border: none; color: white; font-size: 1.1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-        .note-view-container { max-width: 900px; margin: 20px auto; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
-        #view-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 15px 0 5px 0; }
-        #view-meta { font-size: 0.85rem; color: var(--text-light); margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        
+        .note-view-container { max-width: 900px; margin: 20px auto; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); position: relative; }
+        
+        /* PDF Download Button Styling */
+        .btn-pdf-download { background: #0077b6; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .btn-pdf-download:hover { background: #023e8a; }
+
+        #printArea { background: #ffffff !important; padding: 15px; } 
+        
+        /* Watermark */
+        .pdf-watermark { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-30deg); font-size: 60px; font-weight: 800; color: #000; opacity: 0.05; letter-spacing: 5px; pointer-events: none; display: none; z-index: 0; text-align: center; width: 100%; }
+
+        #view-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 15px 0 5px 0; position: relative; z-index: 1; }
+        #view-meta { font-size: 0.85rem; color: var(--text-light); margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
         
         /* Rendered HTML Styling inside View */
-        #view-text { padding: 10px 0; font-size: 1.05rem; line-height: 1.8; color: #374151; word-wrap: break-word; }
+        #view-text { padding: 10px 0; font-size: 1.05rem; line-height: 1.8; color: #374151; word-wrap: break-word; position: relative; z-index: 1; }
         #view-text p { margin-bottom: 10px; }
         #view-text ul, #view-text ol { padding-left: 25px; margin-bottom: 15px; }
 
@@ -88,6 +103,15 @@
         .modal-content { background: white; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; }
         .modal-content h3 { margin-bottom: 20px; text-align: center; color: var(--primary); }
         .close-modal { float: right; cursor: pointer; font-size: 1.5rem; font-weight: bold; color: #aaa; margin-top: -10px; }
+
+        /* Print Specific CSS */
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 20px; }
+            .pdf-watermark { display: block !important; }
+            .btn-pdf-download { display: none !important; }
+        }
     </style>
     
     <!-- Firebase SDK -->
@@ -152,7 +176,6 @@
                     </div>
                     <div class="form-group">
                         <label>Notes Content (Design yourself!)</label>
-                        <!-- NEW RICH TEXT EDITOR -->
                         <div id="editor-container"></div>
                     </div>
                     
@@ -180,14 +203,24 @@
         <div class="note-view-header">
             <button class="back-btn" onclick="closeNoteView()">⬅ Back to List</button>
         </div>
+        
         <div class="note-view-container">
-            <span class="note-subject" id="view-subject"></span>
-            <h1 id="view-title"></h1>
-            <div id="view-meta">
-                <span id="view-date"></span>
+            
+            <!-- Download PDF Button (Moved to Top) -->
+            <button class="btn-pdf-download" id="btnPdfDownload" onclick="downloadNotePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
+
+            <!-- Print Area for PDF -->
+            <div id="printArea">
+                <div class="pdf-watermark">HS 1st Year Commerce</div>
+                
+                <span class="note-subject" id="view-subject"></span>
+                <h1 id="view-title"></h1>
+                <div id="view-meta">
+                    <span id="view-date"></span>
+                </div>
+                <!-- Magic Rich Text will appear here exactly as you typed -->
+                <div id="view-text"></div>
             </div>
-            <!-- Magic Rich Text will appear here exactly as you typed -->
-            <div id="view-text"></div>
         </div>
     </div>
 
@@ -239,7 +272,8 @@
 
         let dbData = { notice: "Welcome to HS 1st Year Commerce", subjects: [], notes: [] };
         let currentFilter = 'All';
-        let currentlyEditingId = null; // Track if we are editing a note
+        let currentlyEditingId = null; 
+        let currentNoteTitle = ""; // To store title for PDF name
 
         db.ref('studyPortal').on('value', (snapshot) => {
             const data = snapshot.val();
@@ -291,7 +325,7 @@
             document.getElementById('admin-panel').style.display = 'none';
             document.getElementById('auth-btn').style.display = 'block';
             document.getElementById('main-body').classList.remove('admin-mode');
-            cancelEdit(); // Reset editor if open
+            cancelEdit(); 
         }
 
         /* --- ADMIN FUNCTIONS --- */
@@ -325,13 +359,11 @@
             }
         }
 
-        // ADD NEW NOTE (Saves Rich HTML)
         function addNote() {
             const subject = document.getElementById('subject-select').value;
             const title = document.getElementById('note-title').value.trim();
-            const htmlContent = quill.root.innerHTML; // Get HTML from Quill
+            const htmlContent = quill.root.innerHTML; 
             
-            // Validation (if editor is empty, quill returns <p><br></p>)
             if(!title || !subject || htmlContent === '<p><br></p>') {
                 return alert("Please fill Title and write some notes!");
             }
@@ -340,19 +372,18 @@
                 id: Date.now(), 
                 subject: subject, 
                 title: title, 
-                text: htmlContent, // Save the HTML format
+                text: htmlContent, 
                 date: new Date().toLocaleDateString('en-IN')
             };
             
             dbData.notes.unshift(newNote); 
             document.getElementById('note-title').value = ""; 
-            quill.setContents([]); // Clear editor
+            quill.setContents([]); 
             
             saveData();
             alert("Note uploaded successfully!");
         }
 
-        // LOAD NOTE INTO EDITOR FOR EDITING
         function editNote(id, event) {
             event.stopPropagation();
             const note = dbData.notes.find(n => n.id === id);
@@ -362,19 +393,15 @@
             document.getElementById('subject-select').value = note.subject;
             document.getElementById('note-title').value = note.title;
             
-            // Load HTML into Quill
             quill.root.innerHTML = note.text;
 
-            // Switch Buttons
             document.getElementById('btn-save-note').style.display = 'none';
             document.getElementById('btn-update-note').style.display = 'block';
             document.getElementById('btn-cancel-edit').style.display = 'block';
             
-            // Scroll to editor
             document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
         }
 
-        // SAVE THE EDITED NOTE
         function saveUpdatedNote() {
             if(!currentlyEditingId) return;
             
@@ -395,7 +422,6 @@
             }
         }
 
-        // CANCEL EDITING
         function cancelEdit() {
             currentlyEditingId = null;
             document.getElementById('note-title').value = "";
@@ -405,7 +431,6 @@
             document.getElementById('btn-cancel-edit').style.display = 'none';
         }
 
-        // DELETE NOTE
         function deleteNote(id, event) {
             event.stopPropagation();
             if(confirm("Are you sure you want to delete this note?")) {
@@ -420,11 +445,12 @@
             const note = dbData.notes.find(n => n.id === id);
             if(!note) return;
             
+            currentNoteTitle = note.title.replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_"); // Clean string for filename
+            
             document.getElementById('view-subject').innerText = note.subject || "";
             document.getElementById('view-title').innerText = note.title || "";
             document.getElementById('view-date').innerText = "Added on: " + (note.date || "");
             
-            // Directly inject the HTML created by Quill
             document.getElementById('view-text').innerHTML = note.text || "";
             
             document.getElementById('note-view-modal').style.display = 'block';
@@ -433,6 +459,116 @@
         function closeNoteView() {
             document.getElementById('note-view-modal').style.display = 'none';
         }
+
+        /* --- PDF GENERATION LOGIC --- */
+        function toast(msg, ms) {
+            let t = document.getElementById('pdfToast');
+            if (!t) {
+                t = document.createElement('div');
+                t.id = 'pdfToast';
+                t.style.cssText = 'position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;' +
+                    'padding:10px 18px;border-radius:20px;font-size:13px;z-index:1000001;display:none;max-width:85%;text-align:center;';
+                document.body.appendChild(t);
+            }
+            t.textContent = msg;
+            t.style.display = 'block';
+            clearTimeout(t._h);
+            if (ms) t._h = setTimeout(function () { t.style.display = 'none'; }, ms);
+        }
+        
+        function hideToast() { 
+            let t = document.getElementById('pdfToast'); 
+            if (t) t.style.display = 'none'; 
+        }
+
+        function legacyCopy(txt) {
+            var ta = document.createElement('textarea');
+            ta.value = txt; ta.style.cssText = 'position:fixed;opacity:0;';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            ta.remove();
+        }
+
+        function showLinkSheet(link, name) {
+            let old = document.getElementById('pdfLinkSheet'); if (old) old.remove();
+            let wrap = document.createElement('div');
+            wrap.id = 'pdfLinkSheet';
+            wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1000000;display:flex;align-items:flex-end;';
+            let wa = 'https://wa.me/?text=' + encodeURIComponent('Notes from Study Portal: ' + link);
+            let btn = 'display:block;text-align:center;text-decoration:none;border:none;border-radius:8px;padding:12px;' +
+                'font-weight:600;font-size:14px;width:100%;margin-top:10px;color:#fff;cursor:pointer;';
+            wrap.innerHTML =
+                '<div style="background:#fff;width:100%;border-radius:16px 16px 0 0;padding:18px 16px 24px;">' +
+                '<div style="font-weight:700;font-size:16px;margin-bottom:4px;"><i class="fas fa-file-pdf" style="color:#e63946"></i> PDF Ready!</div>' +
+                '<div style="font-size:12px;color:#666;margin-bottom:10px;">' + name + '</div>' +
+                '<a href="' + link + '" target="_blank" rel="noopener" style="' + btn + 'background:#e63946;">Open / Download PDF</a>' +
+                '<a href="' + wa + '" target="_blank" rel="noopener" style="' + btn + 'background:#25D366;">Share link on WhatsApp</a>' +
+                '<button id="pdfCopyBtn" style="' + btn + 'background:#0077b6;">Copy Link</button>' +
+                '<button id="pdfCloseBtn" style="' + btn + 'background:#6c757d;">Close</button></div>';
+            document.body.appendChild(wrap);
+            document.getElementById('pdfCopyBtn').onclick = function () {
+                if (navigator.clipboard) { 
+                    navigator.clipboard.writeText(link).catch(()=>{ legacyCopy(link); }); 
+                } else { 
+                    legacyCopy(link); 
+                }
+                toast('Link copied to clipboard!', 1800);
+            };
+            document.getElementById('pdfCloseBtn').onclick = function () { wrap.remove(); };
+        }
+
+        window.downloadNotePDF = async function () {
+            let el = document.getElementById('printArea');
+            let name = currentNoteTitle ? currentNoteTitle + '.pdf' : 'Notes.pdf';
+            toast('Generating PDF...');
+
+            // Temporarily show watermark for print
+            document.querySelector('.pdf-watermark').style.display = 'block';
+
+            try {
+                let blob = await html2pdf().set({
+                    margin: [10, 10, 10, 10], // Top, Right, Bottom, Left margins
+                    image: { type: 'jpeg', quality: 0.95 },
+                    html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                }).from(el).outputPdf('blob');
+
+                // Hide watermark again
+                document.querySelector('.pdf-watermark').style.display = 'none';
+
+                let ua = navigator.userAgent || '';
+                let isWebView = /Android/i.test(ua) && /;\s*wv\)|Version\/\d+\.\d+/i.test(ua);
+
+                if (!isWebView) {
+                    let url = URL.createObjectURL(blob);
+                    let a = document.createElement('a');
+                    a.href = url; a.download = name;
+                    document.body.appendChild(a); a.click();
+                    setTimeout(function () { a.remove(); URL.revokeObjectURL(url); }, 4000);
+                    toast('PDF Downloaded', 2000);
+                    return;
+                }
+
+                toast('Uploading to Cloud Bridge...');
+                let fd = new FormData();
+                fd.append('file', blob, name);
+                
+                let res = await fetch('https://tmpfiles.org/api/v1/upload', { method: 'POST', body: fd });
+                let json = await res.json();
+                let dlUrl = json && json.data && json.data.url;
+
+                if (!dlUrl) throw new Error('Upload failed');
+                dlUrl = dlUrl.replace('http://', 'https://').replace('tmpfiles.org/', 'tmpfiles.org/dl/');
+                
+                hideToast();
+                showLinkSheet(dlUrl, name);
+
+            } catch (err) {
+                console.error(err);
+                document.querySelector('.pdf-watermark').style.display = 'none';
+                toast('Failed. Please check internet connection.', 4000);
+            }
+        };
 
         /* --- USER DISPLAY FUNCTIONS --- */
         function renderSubjects() {
@@ -466,7 +602,6 @@
                 const matchSubject = (currentFilter === 'All') || (note.subject === currentFilter);
                 const titleStr = (note.title || "").toLowerCase();
                 const textStr = (note.text || "").toLowerCase();
-                // Since textStr contains HTML tags now, search will still match words inside tags
                 const matchSearch = titleStr.includes(searchQuery) || textStr.includes(searchQuery);
                 return matchSubject && matchSearch;
             });
@@ -481,7 +616,6 @@
                 div.className = 'note-card';
                 div.onclick = function() { openNote(note.id); };
                 
-                // Added Edit Button (✏️) in the admin controls
                 div.innerHTML = `
                     <div class="admin-controls">
                         <button class="action-btn edit" onclick="editNote(${note.id}, event)" title="Edit Note">✏️</button>
