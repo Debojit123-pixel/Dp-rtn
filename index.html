@@ -5,6 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HS 1st Year Commerce - Study Portal</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Quill.js Rich Text Editor CSS -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+
     <style>
         /* Base Styles */
         :root {
@@ -28,14 +32,19 @@
         .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
         .logout-btn { background: var(--danger); color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; }
         
-        .admin-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .admin-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 20px; }
         @media(max-width: 768px) { .admin-grid { grid-template-columns: 1fr; } }
         
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 0.9rem; }
-        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; font-size: 0.9rem; }
-        .btn-submit { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 500; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 8px; outline: none; font-size: 0.9rem; }
+        .btn-submit { background: var(--primary); color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; width: 100%; font-weight: 500; margin-top: 10px; }
         .btn-danger { background: var(--danger); }
+        .btn-success { background: #10b981; }
+
+        /* Rich Text Editor Overrides */
+        #editor-container { height: 250px; background: white; border-bottom-left-radius: 8px; border-bottom-right-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 15px; }
+        .ql-toolbar.ql-snow { border-top-left-radius: 8px; border-top-right-radius: 8px; background: #f9fafb; }
 
         /* Controls & Filters */
         .controls { display: flex; flex-direction: column; gap: 15px; margin-bottom: 30px; }
@@ -52,9 +61,13 @@
         .note-title { font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 5px; }
         .note-date { font-size: 0.75rem; color: #9ca3af; }
         
-        /* Admin Delete Button */
-        .delete-note-btn { position: absolute; top: 15px; right: 15px; background: none; border: none; color: var(--danger); font-size: 1.2rem; cursor: pointer; display: none; z-index: 10; padding: 5px; }
-        .admin-mode .delete-note-btn { display: block; }
+        /* Admin Delete & Edit Buttons */
+        .admin-controls { position: absolute; top: 15px; right: 15px; display: none; gap: 5px; z-index: 10; }
+        .admin-mode .admin-controls { display: flex; }
+        .action-btn { background: #f3f4f6; border: none; font-size: 1rem; cursor: pointer; padding: 6px; border-radius: 6px; transition: 0.2s; }
+        .action-btn.edit:hover { background: #dbeafe; color: var(--primary); }
+        .action-btn.delete:hover { background: #fee2e2; color: var(--danger); }
+        
         #loading-text { text-align: center; color: var(--primary); font-weight: bold; padding: 20px; }
 
         /* FULL SCREEN NOTE VIEW MODAL */
@@ -64,7 +77,11 @@
         .note-view-container { max-width: 900px; margin: 20px auto; padding: 25px; background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
         #view-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 15px 0 5px 0; }
         #view-meta { font-size: 0.85rem; color: var(--text-light); margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
-        #view-text { padding: 10px 0; } 
+        
+        /* Rendered HTML Styling inside View */
+        #view-text { padding: 10px 0; font-size: 1.05rem; line-height: 1.8; color: #374151; word-wrap: break-word; }
+        #view-text p { margin-bottom: 10px; }
+        #view-text ul, #view-text ol { padding-left: 25px; margin-bottom: 15px; }
 
         /* Login Modal */
         #login-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
@@ -76,6 +93,8 @@
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- Quill.js JS -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
 </head>
 <body id="main-body">
 
@@ -98,28 +117,30 @@
             </div>
             
             <div class="admin-grid">
+                <!-- Subjects & Notices -->
                 <div>
                     <div class="form-group">
                         <label>Update Notice Board</label>
                         <input type="text" id="new-notice" placeholder="Enter urgent notice here...">
-                        <button class="btn-submit" style="margin-top: 10px;" onclick="updateNotice()">Update Notice</button>
+                        <button class="btn-submit" onclick="updateNotice()">Update Notice</button>
                     </div>
                     <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
                     
                     <div class="form-group">
                         <label>Add New Subject</label>
                         <input type="text" id="new-subject" placeholder="e.g. Accountancy, Finance...">
-                        <button class="btn-submit" style="margin-top: 10px; background: var(--secondary);" onclick="addSubject()">Add Subject</button>
+                        <button class="btn-submit" style="background: var(--secondary);" onclick="addSubject()">Add Subject</button>
                     </div>
                     <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
                     
                     <div class="form-group">
                         <label style="color: var(--danger);">Delete Existing Subject</label>
                         <select id="delete-subject-select"></select>
-                        <button class="btn-submit btn-danger" style="margin-top: 10px;" onclick="deleteSubject()">Delete Subject</button>
+                        <button class="btn-submit btn-danger" onclick="deleteSubject()">Delete Subject</button>
                     </div>
                 </div>
 
+                <!-- Text Editor Area -->
                 <div>
                     <div class="form-group">
                         <label>Select Subject</label>
@@ -127,13 +148,17 @@
                     </div>
                     <div class="form-group">
                         <label>Note Title / Topic</label>
-                        <input type="text" id="note-title" placeholder="e.g. Chapter 1 Summary">
+                        <input type="text" id="note-title" placeholder="e.g. Chapter 1 Question Answers">
                     </div>
                     <div class="form-group">
-                        <label>Notes Content</label>
-                        <textarea id="note-text" rows="5" placeholder="Write or paste your notes here..."></textarea>
+                        <label>Notes Content (Design yourself!)</label>
+                        <!-- NEW RICH TEXT EDITOR -->
+                        <div id="editor-container"></div>
                     </div>
-                    <button class="btn-submit" onclick="addNote()">Upload Note</button>
+                    
+                    <button class="btn-submit" id="btn-save-note" onclick="addNote()">Upload New Note</button>
+                    <button class="btn-submit btn-success" id="btn-update-note" style="display: none;" onclick="saveUpdatedNote()">Update Note</button>
+                    <button class="btn-submit btn-danger" id="btn-cancel-edit" style="display: none; margin-top: 5px;" onclick="cancelEdit()">Cancel Edit</button>
                 </div>
             </div>
         </div>
@@ -161,6 +186,7 @@
             <div id="view-meta">
                 <span id="view-date"></span>
             </div>
+            <!-- Magic Rich Text will appear here exactly as you typed -->
             <div id="view-text"></div>
         </div>
     </div>
@@ -177,17 +203,26 @@
     </div>
 
     <script>
-        // Check if Firebase loaded properly
-        window.onload = function() {
-            if(typeof firebase === 'undefined') {
-                document.getElementById('notice-text').innerText = "Firebase load failed! Check Internet.";
-                alert("Internet Connection Check koro. Firebase server load hote pareni.");
-                return;
+        // ------------------------------------------
+        // QUILL.JS RICH TEXT EDITOR SETUP
+        // ------------------------------------------
+        var quill = new Quill('#editor-container', {
+            theme: 'snow',
+            placeholder: 'Type or paste your notes here... You can use Bold, Colors, and Lists from the top bar!',
+            modules: {
+                toolbar: [
+                    [{ 'header': [1, 2, 3, false] }],
+                    ['bold', 'italic', 'underline'],
+                    [{ 'color': [] }, { 'background': [] }],
+                    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+                    ['clean'] // remove formatting button
+                ]
             }
-            if(sessionStorage.getItem('isAdmin') === 'true') showAdminPanel();
-        };
+        });
 
-        // Firebase Config (Your Configuration)
+        // ------------------------------------------
+        // FIREBASE CONFIGURATION
+        // ------------------------------------------
         var firebaseConfig = {
             apiKey: "AIzaSyDLEKhx5cGKBzdIpvOnBRrvHVSN23elvWs",
             authDomain: "notes-2148c.firebaseapp.com",
@@ -204,6 +239,7 @@
 
         let dbData = { notice: "Welcome to HS 1st Year Commerce", subjects: [], notes: [] };
         let currentFilter = 'All';
+        let currentlyEditingId = null; // Track if we are editing a note
 
         db.ref('studyPortal').on('value', (snapshot) => {
             const data = snapshot.val();
@@ -218,11 +254,14 @@
             renderNotes();
         }, (error) => {
             document.getElementById('loading-text').style.display = 'none';
-            document.getElementById('notice-text').innerText = "Database connection blocked!";
             alert("Firebase Error: " + error.message);
         });
 
         function saveData() { db.ref('studyPortal').set(dbData); }
+
+        window.onload = function() {
+            if(sessionStorage.getItem('isAdmin') === 'true') showAdminPanel();
+        };
 
         /* --- AUTHENTICATION --- */
         function openLoginModal() { document.getElementById('login-modal').style.display = 'flex'; }
@@ -252,6 +291,7 @@
             document.getElementById('admin-panel').style.display = 'none';
             document.getElementById('auth-btn').style.display = 'block';
             document.getElementById('main-body').classList.remove('admin-mode');
+            cancelEdit(); // Reset editor if open
         }
 
         /* --- ADMIN FUNCTIONS --- */
@@ -285,81 +325,109 @@
             }
         }
 
+        // ADD NEW NOTE (Saves Rich HTML)
         function addNote() {
             const subject = document.getElementById('subject-select').value;
             const title = document.getElementById('note-title').value.trim();
-            const text = document.getElementById('note-text').value;
-            if(!title || !text || !subject) return alert("Please fill all details!");
+            const htmlContent = quill.root.innerHTML; // Get HTML from Quill
+            
+            // Validation (if editor is empty, quill returns <p><br></p>)
+            if(!title || !subject || htmlContent === '<p><br></p>') {
+                return alert("Please fill Title and write some notes!");
+            }
 
             const newNote = {
-                id: Date.now(), subject: subject, title: title, text: text,
+                id: Date.now(), 
+                subject: subject, 
+                title: title, 
+                text: htmlContent, // Save the HTML format
                 date: new Date().toLocaleDateString('en-IN')
             };
+            
             dbData.notes.unshift(newNote); 
-            document.getElementById('note-title').value = ""; document.getElementById('note-text').value = "";
+            document.getElementById('note-title').value = ""; 
+            quill.setContents([]); // Clear editor
+            
             saveData();
-            alert("Note uploaded globally!");
+            alert("Note uploaded successfully!");
         }
 
+        // LOAD NOTE INTO EDITOR FOR EDITING
+        function editNote(id, event) {
+            event.stopPropagation();
+            const note = dbData.notes.find(n => n.id === id);
+            if(!note) return;
+
+            currentlyEditingId = id;
+            document.getElementById('subject-select').value = note.subject;
+            document.getElementById('note-title').value = note.title;
+            
+            // Load HTML into Quill
+            quill.root.innerHTML = note.text;
+
+            // Switch Buttons
+            document.getElementById('btn-save-note').style.display = 'none';
+            document.getElementById('btn-update-note').style.display = 'block';
+            document.getElementById('btn-cancel-edit').style.display = 'block';
+            
+            // Scroll to editor
+            document.getElementById('admin-panel').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // SAVE THE EDITED NOTE
+        function saveUpdatedNote() {
+            if(!currentlyEditingId) return;
+            
+            const subject = document.getElementById('subject-select').value;
+            const title = document.getElementById('note-title').value.trim();
+            const htmlContent = quill.root.innerHTML;
+            
+            if(!title || htmlContent === '<p><br></p>') return alert("Fields cannot be empty!");
+
+            const noteIndex = dbData.notes.findIndex(n => n.id === currentlyEditingId);
+            if(noteIndex > -1) {
+                dbData.notes[noteIndex].subject = subject;
+                dbData.notes[noteIndex].title = title;
+                dbData.notes[noteIndex].text = htmlContent;
+                saveData();
+                alert("Note updated successfully!");
+                cancelEdit();
+            }
+        }
+
+        // CANCEL EDITING
+        function cancelEdit() {
+            currentlyEditingId = null;
+            document.getElementById('note-title').value = "";
+            quill.setContents([]);
+            document.getElementById('btn-save-note').style.display = 'block';
+            document.getElementById('btn-update-note').style.display = 'none';
+            document.getElementById('btn-cancel-edit').style.display = 'none';
+        }
+
+        // DELETE NOTE
         function deleteNote(id, event) {
             event.stopPropagation();
             if(confirm("Are you sure you want to delete this note?")) {
                 dbData.notes = dbData.notes.filter(note => note.id !== id);
+                if(currentlyEditingId === id) cancelEdit();
                 saveData();
             }
         }
 
-        /* --- PRO LEVEL FORMATTING LOGIC --- */
+        /* --- DISPLAY RICH TEXT IN FULL SCREEN --- */
         function openNote(id) {
-            try {
-                const note = dbData.notes.find(n => n.id === id);
-                if(!note) return;
-                
-                document.getElementById('view-subject').innerText = note.subject || "";
-                document.getElementById('view-title').innerText = note.title || "";
-                document.getElementById('view-date').innerText = "Added on: " + (note.date || "");
-                
-                let textToFormat = note.text || "No content found.";
-                let lines = textToFormat.split('\n');
-                let formattedHtml = '';
-                
-                lines.forEach(line => {
-                    let trimmed = line.trim();
-                    if (trimmed === '') {
-                        // Empty lines for natural spacing
-                        formattedHtml += `<div style="height: 10px;"></div>`;
-                    } else {
-                        let safeText = trimmed.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-                        let lowerText = safeText.toLowerCase();
-                        
-                        // 1. CAPTION DETECTOR (Headings) - Checks for common caption words and keeps length short
-                        let isCaption = /(অতি চমু প্রশ্ন|চমু প্রশ্ন|দীর্ঘ প্রশ্ন|ৰচনাধৰ্মী|বহুবিকল্পী|মান|marks|section|part|বিভাগ|অধ্যায়|chapter|question and answer|proshno)/i.test(lowerText) && safeText.length < 80;
-                        
-                        // 2. ANSWER DETECTOR - Matches 'Ans', 'Answer', 'উঃ', 'উত্তর'
-                        let isAnswer = /^(ans|answer|উঃ|উত্তর|sol|solution|উ\.|ans\.)/i.test(safeText);
-                        
-                        // 3. QUESTION DETECTOR - Matches 'Q.', 'প্রঃ', numbers '1.', '১.', or ends with '?'
-                        let isQuestion = /^(q|question|প্রঃ|প্রশ্ন|প্র\.|q\.)/i.test(safeText) || /^[0-9০১২৩৪৫৬৭৮৯]+[\s.)\-]/i.test(safeText) || safeText.endsWith('?');
-
-                        // APPLY STYLES (Professional Left Borders instead of messy dashed lines)
-                        if (isCaption) {
-                            formattedHtml += `<div style="margin: 20px 0 10px 0; padding: 8px 10px; background: #eef2ff; color: #3730a3; font-weight: 700; text-align: center; border-radius: 6px; border: 1px solid #c7d2fe; font-size: 1.1rem; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">${safeText}</div>`;
-                        } else if (isAnswer) {
-                            formattedHtml += `<div style="margin-top: 10px; font-weight: 600; color: #059669; padding-left: 12px; border-left: 4px solid #10b981;">${safeText}</div>`;
-                        } else if (isQuestion) {
-                            formattedHtml += `<div style="margin-top: 20px; font-weight: 700; color: #b91c1c; padding-left: 12px; border-left: 4px solid #ef4444;">${safeText}</div>`;
-                        } else {
-                            // Normal Text continuation
-                            formattedHtml += `<div style="margin-top: 6px; color: #374151; line-height: 1.7; white-space: pre-wrap; padding-left: 16px;">${safeText}</div>`;
-                        }
-                    }
-                });
-                
-                document.getElementById('view-text').innerHTML = formattedHtml;
-                document.getElementById('note-view-modal').style.display = 'block';
-            } catch (err) {
-                alert("Error opening note: " + err.message);
-            }
+            const note = dbData.notes.find(n => n.id === id);
+            if(!note) return;
+            
+            document.getElementById('view-subject').innerText = note.subject || "";
+            document.getElementById('view-title').innerText = note.title || "";
+            document.getElementById('view-date').innerText = "Added on: " + (note.date || "");
+            
+            // Directly inject the HTML created by Quill
+            document.getElementById('view-text').innerHTML = note.text || "";
+            
+            document.getElementById('note-view-modal').style.display = 'block';
         }
 
         function closeNoteView() {
@@ -398,6 +466,7 @@
                 const matchSubject = (currentFilter === 'All') || (note.subject === currentFilter);
                 const titleStr = (note.title || "").toLowerCase();
                 const textStr = (note.text || "").toLowerCase();
+                // Since textStr contains HTML tags now, search will still match words inside tags
                 const matchSearch = titleStr.includes(searchQuery) || textStr.includes(searchQuery);
                 return matchSubject && matchSearch;
             });
@@ -412,8 +481,12 @@
                 div.className = 'note-card';
                 div.onclick = function() { openNote(note.id); };
                 
+                // Added Edit Button (✏️) in the admin controls
                 div.innerHTML = `
-                    <button class="delete-note-btn" onclick="deleteNote(${note.id}, event)" title="Delete Note">🗑️</button>
+                    <div class="admin-controls">
+                        <button class="action-btn edit" onclick="editNote(${note.id}, event)" title="Edit Note">✏️</button>
+                        <button class="action-btn delete" onclick="deleteNote(${note.id}, event)" title="Delete Note">🗑️</button>
+                    </div>
                     <span class="note-subject">${note.subject}</span>
                     <h3 class="note-title">${note.title}</h3>
                     <div class="note-date">${note.date}</div>
