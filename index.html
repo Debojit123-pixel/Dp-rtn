@@ -93,9 +93,8 @@
         #view-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 15px 0 5px 0; position: relative; z-index: 1; }
         #view-meta { font-size: 0.85rem; color: var(--text-light); margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
         
-        /* Rendered HTML Styling inside View (Prevents Breaking correctly) */
+        /* Rendered HTML Styling inside View - Removed strict page-break to fix crash on large files */
         #view-text { padding: 10px 0; font-size: 1.05rem; line-height: 1.8; color: #374151; word-wrap: break-word; position: relative; z-index: 1; }
-        #view-text > * { page-break-inside: avoid !important; }
         #view-text p { margin-bottom: 10px; }
         #view-text ul, #view-text ol { padding-left: 25px; margin-bottom: 15px; }
 
@@ -198,7 +197,7 @@
         
         <div class="note-view-container">
             
-            <!-- Download PDF Button (Name changed to "Download PDF") -->
+            <!-- Download PDF Button -->
             <button class="btn-pdf-download" id="btnPdfDownload" onclick="downloadNotePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
 
             <!-- Print Area for PDF -->
@@ -240,7 +239,7 @@
                     ['bold', 'italic', 'underline'],
                     [{ 'color': [] }, { 'background': [] }],
                     [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                    ['clean'] // remove formatting button
+                    ['clean']
                 ]
             }
         });
@@ -437,6 +436,7 @@
             const note = dbData.notes.find(n => n.id === id);
             if(!note) return;
             
+            // Format title for filename
             currentNoteTitle = note.title.replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_"); 
             
             document.getElementById('view-subject').innerText = note.subject || "";
@@ -452,7 +452,7 @@
             document.getElementById('note-view-modal').style.display = 'none';
         }
 
-        /* --- PDF GENERATION LOGIC (CLOUD UPLOAD + POPUP) --- */
+        /* --- PDF GENERATION LOGIC (CLOUD UPLOAD + POPUP FIXED FOR LARGE FILES) --- */
         function toast(msg, ms) {
             let t = document.getElementById('pdfToast');
             if (!t) {
@@ -512,25 +512,25 @@
         window.downloadNotePDF = async function () {
             let el = document.getElementById('printArea');
             let name = currentNoteTitle ? currentNoteTitle + '.pdf' : 'Notes.pdf';
-            toast('Generating PDF...');
+            toast('Generating PDF... Please wait.');
 
             document.querySelector('.pdf-watermark').style.display = 'block';
 
             let blob;
             try {
-                // FIXED: Removed avoid-all from JS options to prevent crashing. CSS handles it now.
+                // FIXED FOR LARGE 10+ PAGE FILES: Scale changed to 1 to prevent memory crash
                 let opt = {
-                    margin:       [10, 10, 10, 10],
+                    margin:       10, // simplified margin
                     filename:     name,
-                    image:        { type: 'jpeg', quality: 0.98 },
-                    html2canvas:  { scale: 2, useCORS: true },
+                    image:        { type: 'jpeg', quality: 0.85 }, // Reduced quality slightly to save memory
+                    html2canvas:  { scale: 1, useCORS: true }, // SCALE 1 IS THE MAGIC FIX
                     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
                 };
                 blob = await html2pdf().set(opt).from(el).outputPdf('blob');
             } catch(err) {
                 console.error(err);
                 document.querySelector('.pdf-watermark').style.display = 'none';
-                return toast('PDF Generation Failed: ' + err.message, 4000);
+                return toast('PDF Generation Failed. Content might be too large.', 4000);
             }
 
             document.querySelector('.pdf-watermark').style.display = 'none';
@@ -539,10 +539,10 @@
             let dlUrl = '';
 
             try {
-                // PRIMARY UPLOAD SERVER (Catbox - Very reliable, allows CORS)
+                // PRIMARY UPLOAD SERVER (Catbox - Very reliable, no APK block)
                 let fd1 = new FormData();
                 fd1.append('reqtype', 'fileupload');
-                fd1.append('time', '12h'); // Expires in 12 hours
+                fd1.append('time', '12h'); 
                 fd1.append('fileToUpload', blob, name);
                 
                 let res1 = await fetch('https://litterbox.catbox.moe/user/api.php', { method: 'POST', body: fd1 });
@@ -551,7 +551,7 @@
                 if(!dlUrl.startsWith('http')) throw new Error('Primary server failed');
 
             } catch (err1) {
-                // FALLBACK UPLOAD SERVER (tmpfiles.org - Used if first one fails)
+                // FALLBACK UPLOAD SERVER (tmpfiles.org)
                 try {
                     let fd2 = new FormData();
                     fd2.append('file', blob, name);
@@ -565,7 +565,7 @@
                     }
                 } catch(err2) {
                     console.error(err1, err2);
-                    return toast('Upload failed. Please check internet connection.', 4000);
+                    return toast('Upload failed. Check internet connection.', 4000);
                 }
             }
             
