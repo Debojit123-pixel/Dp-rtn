@@ -85,6 +85,7 @@
         .btn-pdf-download { background: #0077b6; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; width: 100%; margin-bottom: 20px; display: flex; justify-content: center; align-items: center; gap: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .btn-pdf-download:hover { background: #023e8a; }
 
+        /* Print Area Formatting */
         #printArea { background: #ffffff !important; padding: 15px; } 
         
         /* Watermark */
@@ -93,10 +94,10 @@
         #view-title { font-size: 1.8rem; font-weight: 700; color: var(--text-main); margin: 15px 0 5px 0; position: relative; z-index: 1; }
         #view-meta { font-size: 0.85rem; color: var(--text-light); margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 1; }
         
-        /* Rendered HTML Styling inside View - Preventing Page Breaks */
+        /* FIX FOR OVERLAPPING TEXT: Clean line-height and natural page breaks */
         #view-text { padding: 10px 0; font-size: 1.05rem; line-height: 1.8; color: #374151; word-wrap: break-word; position: relative; z-index: 1; }
-        #view-text p { margin-bottom: 10px; page-break-inside: avoid !important; }
-        #view-text ul, #view-text ol { padding-left: 25px; margin-bottom: 15px; page-break-inside: avoid !important; }
+        #view-text p { margin-bottom: 12px; }
+        #view-text ul, #view-text ol { padding-left: 25px; margin-bottom: 15px; }
 
         /* Login Modal */
         #login-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
@@ -432,8 +433,10 @@
             const note = dbData.notes.find(n => n.id === id);
             if(!note) return;
             
-            currentNoteTitle = note.title.replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_"); 
-            
+            // Format title for filename properly
+            currentNoteTitle = note.title.replace(/[^a-zA-Z0-9 ঀ-৿]/g, "").trim().replace(/\s+/g, "_"); 
+            if(currentNoteTitle === "") currentNoteTitle = "Study_Notes";
+
             document.getElementById('view-subject').innerText = note.subject || "";
             document.getElementById('view-title').innerText = note.title || "";
             document.getElementById('view-date').innerText = "Added on: " + (note.date || "");
@@ -447,7 +450,7 @@
             document.getElementById('note-view-modal').style.display = 'none';
         }
 
-        /* --- NATIVE BROWSER PDF DOWNLOAD LOGIC --- */
+        /* --- DIRECT HIGH QUALITY BROWSER DOWNLOAD (Overlapping Fix) --- */
         function toast(msg, ms) {
             let t = document.getElementById('pdfToast');
             if (!t) {
@@ -467,23 +470,23 @@
             let el = document.getElementById('printArea');
             let name = currentNoteTitle ? currentNoteTitle + '.pdf' : 'Notes.pdf';
             
-            toast('Generating PDF... Please wait.');
+            toast('Generating High-Quality PDF... Please wait.');
             document.querySelector('.pdf-watermark').style.display = 'block';
 
-            // NO INTERNET NEEDED: Direct Browser Download setup
+            // High Quality options. No manual CSS page-break avoids overlapping text.
             let opt = {
-                margin:       10, 
+                margin:       15, 
                 filename:     name,
-                image:        { type: 'jpeg', quality: 0.98 }, 
-                html2canvas:  { scale: 1.5, useCORS: true }, // High Quality is back!
+                image:        { type: 'jpeg', quality: 1 }, 
+                html2canvas:  { scale: 2, useCORS: true }, 
                 jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak:    { mode: ['avoid-all', 'css'] } // Prevents text splitting
+                pagebreak:    { mode: ['css', 'legacy'] } // Lets the PDF engine naturally wrap the pages!
             };
 
-            // Generate and instantly download!
+            // Direct Save to Browser
             html2pdf().set(opt).from(el).save().then(function() {
                 document.querySelector('.pdf-watermark').style.display = 'none';
-                toast('Download Started Successfully!', 3000);
+                toast('PDF Downloaded Successfully!', 3000);
             }).catch(function(err) {
                 console.error(err);
                 document.querySelector('.pdf-watermark').style.display = 'none';
